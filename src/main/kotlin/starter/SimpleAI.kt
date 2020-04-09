@@ -17,6 +17,7 @@ fun gameLoop() {
     // just an example of how to use room memory
     mainSpawn.room.memory.numberOfCreeps = mainSpawn.room.find(FIND_CREEPS).count()
 
+    spawnBigHarvesters(Game.creeps.values, mainSpawn)
     //make sure we have at least some creeps
     spawnCreeps(arrayOf(WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn)
     spawnCreeps(arrayOf(WORK, CARRY, MOVE), Game.creeps.values, mainSpawn)
@@ -67,6 +68,57 @@ private fun attack(tower: StructureTower) {
     if (hostileCreeps.isNotEmpty()) {
         Game.notify("Spotted enemy creep ${hostileCreeps[0].owner.username}")
         tower.attack(hostileCreeps[0])
+    }
+}
+
+//Refactor this method
+private fun spawnBigHarvesters(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+) {
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.HARVESTER } < 5 -> Role.HARVESTER
+        else -> return
+    }
+
+    val body = arrayOf<BodyPartConstant>(
+            WORK,
+            WORK,
+            WORK,
+            WORK,
+            CARRY,
+            CARRY,
+            CARRY,
+            CARRY,
+            CARRY,
+            CARRY,
+            CARRY,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE,
+            MOVE
+    )
+
+    if (spawn.room.energyAvailable < body.sumBy { BODYPART_COST[it]!! }) {
+        return
+    }
+
+    val newName = "${role.name}_${Game.time}"
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> { this.role = role }
+    })
+
+    when (code) {
+        OK -> console.log("spawning $newName with body $body")
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
+        else -> console.log("unhandled error code $code")
     }
 }
 

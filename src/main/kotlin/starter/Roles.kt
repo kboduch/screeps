@@ -122,9 +122,18 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
 
-    if (store[RESOURCE_ENERGY]!! < store.getCapacity(RESOURCE_ENERGY)!!) {
+    if (memory.building && store[RESOURCE_ENERGY] == 0) {
+        memory.building = false
+        say("harvest")
+    }
+    if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
+        memory.building = true
+        say("storing")
+    }
 
-        if (toRoom.energyAvailable < toRoom.energyCapacityAvailable) {
+    if (!memory.building) {
+
+        if (body.sumBy { BODYPART_COST[it.type]!! } < 1000 && toRoom.energyAvailable < toRoom.energyCapacityAvailable) {
             val containers = toRoom.find(FIND_STRUCTURES)
                     .filter { it.isEnergyContainer() }
                     .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
