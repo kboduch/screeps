@@ -39,7 +39,7 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
         }
     } else {
         val targets = fromRoom.find(FIND_STRUCTURES)
-                .filter { it.structureType == STRUCTURE_CONTAINER }
+                .filter { it.isEnergyContainer() }
                 .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
 
         if (targets.isNotEmpty()) {
@@ -100,7 +100,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
         }
     } else {
 
-        val containers = assignedRoom.find(FIND_STRUCTURES).filter { it.structureType == STRUCTURE_CONTAINER }
+        val containers = assignedRoom.find(FIND_STRUCTURES).filter { it.isEnergyContainer() }
         val enoughEnergyInContainers = containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! } > (containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! } / 2)
 
         if (towers.isNotEmpty() && enoughEnergyInContainers) {
@@ -126,7 +126,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
         if (toRoom.energyAvailable < toRoom.energyCapacityAvailable) {
             val containers = toRoom.find(FIND_STRUCTURES)
-                    .filter { it.structureType == STRUCTURE_CONTAINER }
+                    .filter { it.isEnergyContainer() }
                     .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
             if (containers.isNotEmpty()) {
                 if (withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
@@ -162,7 +162,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         val targets = baseTargets.toMutableList()
         targets.addAll(
                 toRoom.find(FIND_STRUCTURES)
-                        .filter { it.structureType == STRUCTURE_CONTAINER }
+                        .filter { it.isEnergyContainer() }
                         .filter { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! < it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
         )
 
@@ -214,7 +214,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
     } else {
         val targets = fromRoom.find(FIND_STRUCTURES)
-                .filter { it.structureType == STRUCTURE_CONTAINER }
+                .filter { it.isEnergyContainer() }
                 .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
 
         if (targets.isNotEmpty()) {

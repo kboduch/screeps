@@ -36,7 +36,7 @@ fun gameLoop() {
     }
 
     console.log("*====*")
-    val containers = mainSpawn.room.find(FIND_STRUCTURES).filter { it.structureType == STRUCTURE_CONTAINER }
+    val containers = mainSpawn.room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() }
     console.log(
             Game.time,
             "${mainSpawn.room.energyAvailable}/${mainSpawn.room.energyCapacityAvailable}",
