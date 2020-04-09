@@ -2,6 +2,7 @@ package starter
 
 
 import screeps.api.*
+import screeps.api.structures.Structure
 import screeps.api.structures.StructureSpawn
 import screeps.api.structures.StructureTower
 import screeps.utils.isEmpty
@@ -131,12 +132,25 @@ private fun spawnCreeps(
         return
     }
 
-    val damagedStructures = spawn.room.find(FIND_STRUCTURES, options {
-        filter = {
-            (80 > (100 * it.hits / it.hitsMax)) &&
-                    it.structureType != STRUCTURE_CONTROLLER
-        }
-    })
+    val damagedStructures = mutableListOf<Structure>()
+
+    damagedStructures.addAll(
+            spawn.room.find(FIND_STRUCTURES, options {
+                filter = {
+                    (80 > (100 * it.hits / it.hitsMax)) &&
+                            it.structureType != STRUCTURE_CONTROLLER && it.structureType != STRUCTURE_WALL
+                }
+            })
+    )
+
+    damagedStructures.addAll(
+            spawn.room.find(FIND_STRUCTURES, options {
+                filter = {
+                            500000 > it.hits &&
+                            it.structureType == STRUCTURE_WALL
+                }
+            })
+    )
 
     var minimumUpgraders = 3;
 
