@@ -78,7 +78,7 @@ private fun spawnBigHarvesters(
         spawn: StructureSpawn
 ) {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.HARVESTER } < 5 -> Role.HARVESTER
+        creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
         else -> return
     }
 
@@ -166,7 +166,7 @@ private fun spawnCreeps(
 
     val role: Role = when {
 
-        creeps.count { it.memory.role == Role.HARVESTER } < 5 -> Role.HARVESTER
+        creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
 
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
