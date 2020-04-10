@@ -164,7 +164,7 @@ fun RoomPosition.getTerrainAt(): TerrainConstant {
 }
 
 fun RoomPosition.isSteppable(includeCreeps: Boolean = true, includeStructures: Boolean = true): Boolean {
-    if (getTerrainAt() == TERRAIN_WALL) {
+    if (getTerrainAt() == TERRAIN_WALL && lookFor(LOOK_STRUCTURES)?.none { it.structureType == STRUCTURE_ROAD } == true) {
         return false
     }
 
