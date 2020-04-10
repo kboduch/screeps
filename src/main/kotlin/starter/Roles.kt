@@ -146,16 +146,16 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
             }
         }
 
-//        val droppedSources = fromRoom.find(FIND_DROPPED_RESOURCES, options { filter = { it.resourceType == RESOURCE_ENERGY } })
-//
-//        if (droppedSources.isNotEmpty()) {
-//
-//            if (pickup(droppedSources.first()) == ERR_NOT_IN_RANGE) {
-//                moveTo(droppedSources.first().pos)
-//            }
-//
-//            return
-//        }
+        val droppedSourcesInRange = fromRoom.find(FIND_DROPPED_RESOURCES, options { filter = { it.resourceType == RESOURCE_ENERGY } })
+                .filter { it.pos.inRangeTo(pos,3) }
+
+        if (droppedSourcesInRange.isNotEmpty()) {
+            if (pickup(droppedSourcesInRange.first()) == ERR_NOT_IN_RANGE) {
+                moveTo(droppedSourcesInRange.first().pos)
+            }
+
+            return
+        }
 
         val sources = fromRoom.find(FIND_SOURCES, options { filter = { it.energy > 0 } })
         if (sources.isNotEmpty())
