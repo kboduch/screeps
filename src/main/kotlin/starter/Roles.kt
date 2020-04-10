@@ -1,6 +1,7 @@
 package starter
 
 import screeps.api.*
+import screeps.api.structures.Structure
 import screeps.api.structures.StructureController
 
 
@@ -202,15 +203,44 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
     if (memory.building) {
 
-        val targets = toRoom.find(
+        val damagedStructures = toRoom.find(
                 FIND_STRUCTURES,
-                options {
-                    filter = {
-                        ((it.structureType != STRUCTURE_CONTROLLER && it.structureType != STRUCTURE_WALL) && (it.hits < it.hitsMax))
-                                || ((it.structureType == STRUCTURE_WALL) && (500000 > it.hits))
-                    }
-                }
+                options { filter = { it.structureType != STRUCTURE_CONTROLLER && it.hits < it.hitsMax} }
         )
+
+        var targets = listOf<Structure>()
+
+        val otherDamagedStructures = damagedStructures.filter { it.structureType != STRUCTURE_WALL }
+
+        if (otherDamagedStructures.isNotEmpty()) {
+            targets = otherDamagedStructures
+        } else {
+            var damagedWalls = damagedStructures.filter {
+                it.structureType == STRUCTURE_WALL
+            }
+
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelowPercent(1) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(1500000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(1000000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(900000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(800000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(700000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(600000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(500000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(400000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(300000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(200000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(100000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(50000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(25000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(10000) }
+            damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelow(1000) }
+
+            if (damagedWalls.isNotEmpty())
+                targets = damagedWalls
+        }
+
+        targets = targets.toMutableList().sortedBy { it.hits }
 
         if (targets.isNotEmpty()) {
             if (repair(targets[0]) == ERR_NOT_IN_RANGE) {
