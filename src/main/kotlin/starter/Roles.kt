@@ -240,7 +240,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
                 targets = damagedWalls
         }
 
-        targets = targets.toMutableList().sortedBy { it.hits }
+        targets = targets.toMutableList().sortedBy { it.hits + it.pos.getRangeTo(this.pos) }
 
         if (targets.isNotEmpty()) {
             if (repair(targets[0]) == ERR_NOT_IN_RANGE) {
