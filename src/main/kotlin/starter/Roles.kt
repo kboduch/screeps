@@ -202,10 +202,15 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
     if (memory.building) {
 
-        val targets = toRoom.find(FIND_STRUCTURES, options { filter = {
-            it.hits < it.hitsMax &&
-                    it.structureType != STRUCTURE_CONTROLLER
-        } })
+        val targets = toRoom.find(
+                FIND_STRUCTURES,
+                options {
+                    filter = {
+                        ((it.structureType != STRUCTURE_CONTROLLER && it.structureType != STRUCTURE_WALL) && (it.hits < it.hitsMax))
+                                || ((it.structureType == STRUCTURE_WALL) && (500000 > it.hits))
+                    }
+                }
+        )
 
         if (targets.isNotEmpty()) {
             if (repair(targets[0]) == ERR_NOT_IN_RANGE) {
