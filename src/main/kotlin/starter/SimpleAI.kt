@@ -20,8 +20,8 @@ fun gameLoop() {
 
     spawnBigHarvesters(Game.creeps.values, mainSpawn)
     //make sure we have at least some creeps
-    spawnCreeps(arrayOf(WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn)
-    spawnCreeps(arrayOf(WORK, CARRY, MOVE), Game.creeps.values, mainSpawn)
+    spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn)
+    spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn)
 
     // build a few extensions so we can have 550 energy
     val controller = mainSpawn.room.controller
