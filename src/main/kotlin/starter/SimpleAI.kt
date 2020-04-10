@@ -58,17 +58,49 @@ fun gameLoop() {
 
     for ((_, structure) in Game.structures) {
         when (structure.structureType) {
-            STRUCTURE_TOWER -> attack(structure as StructureTower)
+            STRUCTURE_TOWER -> towerAction(structure as StructureTower)
         }
     }
-
+    test(mainSpawn.room)
 }
 
-private fun attack(tower: StructureTower) {
-    val hostileCreeps = tower.pos.findInRange(FIND_HOSTILE_CREEPS,5)
+private fun test(room: Room) {
+}
+
+private fun towerAction(tower: StructureTower) {
+    val hostileRange = 5
+    val friendlyRange = 10
+
+
+    tower.room.visual
+            .circle(tower.pos, options {
+                radius = (2 * hostileRange).toDouble()
+                fill = "transparent"
+                stroke = "red"
+                lineStyle = LINE_STYLE_DOTTED
+                opacity = 0.15
+            })
+            .circle(tower.pos, options {
+                radius = (2 * friendlyRange).toDouble()
+                fill = "transparent"
+                stroke = "green"
+                lineStyle = LINE_STYLE_DOTTED
+                opacity = 0.15
+            })
+
+    val hostileCreeps = tower.pos.findInRange(FIND_HOSTILE_CREEPS, hostileRange)
     if (hostileCreeps.isNotEmpty()) {
         Game.notify("Spotted enemy creep ${hostileCreeps[0].owner.username}")
         tower.attack(hostileCreeps[0])
+
+        return
+    }
+
+    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.structureType == STRUCTURE_ROAD && it.isHpBelowPercent(80) } })
+    if (damagedRoads.isNotEmpty()) {
+        tower.repair(damagedRoads[0])
+
+        return
     }
 }
 
