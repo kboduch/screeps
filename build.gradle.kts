@@ -82,7 +82,7 @@ tasks.register<RestTask>("deploy") {
         modules["main"] = main.readText()
         modules.putAll(otherModules.associate { it.nameWithoutExtension to it.readText() })
 
-        println("uploading ${jsFiles.count()} files to branch $branch on server $host")
+        println("uploading ${jsFiles.count()} files to branch **$branch** on server $host")
     }
 
 }
