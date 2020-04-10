@@ -111,10 +111,16 @@ fun Creep.build(assignedRoom: Room = this.room) {
             return
         }
 
-        val sources = room.find(FIND_SOURCES, options { filter = { it.energy > 0 } })
-        if (sources.isNotEmpty()){}
-            if (harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(sources[0].pos)
+        //todo extract `find and harvest` logic
+        var activeSourcesInRange = this.pos.findInRange(FIND_SOURCES_ACTIVE, 1)
+
+        if (activeSourcesInRange.isEmpty()) {
+            activeSourcesInRange = assignedRoom.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
+        }
+
+        if (activeSourcesInRange.isNotEmpty())
+            if (harvest(activeSourcesInRange[0]) == ERR_NOT_IN_RANGE) {
+                moveTo(activeSourcesInRange[0].pos)
             }
     }
 }
@@ -158,10 +164,16 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
             return
         }
 
-        val sources = fromRoom.find(FIND_SOURCES, options { filter = { it.energy > 0 } })
-        if (sources.isNotEmpty())
-            if (harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(sources[0].pos)
+        //todo extract `find and harvest` logic
+        var activeSourcesInRange = this.pos.findInRange(FIND_SOURCES_ACTIVE, 1)
+
+        if (activeSourcesInRange.isEmpty()) {
+            activeSourcesInRange = fromRoom.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
+        }
+
+        if (activeSourcesInRange.isNotEmpty())
+            if (harvest(activeSourcesInRange[0]) == ERR_NOT_IN_RANGE) {
+                moveTo(activeSourcesInRange[0].pos)
             }
     } else {
 
