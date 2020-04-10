@@ -165,20 +165,18 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
             }
     } else {
 
-        val baseTargets = toRoom.find(FIND_MY_STRUCTURES)
-            .filter { (it.structureType == STRUCTURE_EXTENSION || it.structureType == STRUCTURE_SPAWN) }
-            .filter { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! < it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
+        var energyContainers = room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
+        val spawn = room.find(FIND_MY_STRUCTURES).filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
 
-        val targets = baseTargets.toMutableList()
-        targets.addAll(
-                toRoom.find(FIND_STRUCTURES)
-                        .filter { it.isEnergyContainer() }
-                        .filter { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! < it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
-        )
+        if (spawn.isNotEmpty()) {
+            energyContainers = spawn
+        }
 
-        if (targets.isNotEmpty()) {
-            if (transfer(targets[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(targets[0].pos)
+        energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
+
+        if (energyContainers.isNotEmpty()) {
+            if (transfer(energyContainers[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                moveTo(energyContainers[0].pos)
             }
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
