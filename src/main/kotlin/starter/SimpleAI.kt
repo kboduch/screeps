@@ -155,11 +155,11 @@ private fun spawnCreeps(
     var minimumUpgraders = 3;
 
     val containers = spawn.room.find(FIND_STRUCTURES)
-            .filter { it.structureType == STRUCTURE_CONTAINER }
+            .filter { it.isEnergyContainer() }
 
     if (
             spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
-            containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! } == containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
+            containers.isNotEmpty() && containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! } == containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
     ) {
         minimumUpgraders = 5
     }
