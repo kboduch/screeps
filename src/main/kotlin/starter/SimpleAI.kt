@@ -68,20 +68,20 @@ private fun test(room: Room) {
 }
 
 private fun towerAction(tower: StructureTower) {
-    val hostileRange = 5
-    val friendlyRange = 10
+    val hostileRange = 10
+    val friendlyRange = 20
 
 
     tower.room.visual
             .circle(tower.pos, options {
-                radius = (2 * hostileRange).toDouble()
+                radius = hostileRange.toDouble()
                 fill = "transparent"
                 stroke = "red"
                 lineStyle = LINE_STYLE_DOTTED
                 opacity = 0.15
             })
             .circle(tower.pos, options {
-                radius = (2 * friendlyRange).toDouble()
+                radius = friendlyRange.toDouble()
                 fill = "transparent"
                 stroke = "green"
                 lineStyle = LINE_STYLE_DOTTED
