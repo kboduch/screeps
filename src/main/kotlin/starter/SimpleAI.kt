@@ -38,16 +38,15 @@ fun gameLoop() {
         }
     }
 
-    console.log("*====*")
     val containers = mainSpawn.room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() }
-    console.log(
-            Game.time,
-            "${mainSpawn.room.energyAvailable}/${mainSpawn.room.energyCapacityAvailable}",
-            "${containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }}/${containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }}"
+    mainSpawn.room.visual.text(
+            "${Game.time} ${mainSpawn.room.energyAvailable}/${mainSpawn.room.energyCapacityAvailable} ${containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }}/${containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }}",
+            0.0,
+            0.0,
+            options { align = TEXT_ALIGN_LEFT }
     )
+
     for ((_, creep) in Game.creeps) {
-        if(Role.HARVESTER == creep.memory.role)
-            console.log(creep.ticksToLive, creep.body.map { it.type })
         when (creep.memory.role) {
             Role.REPAIRER -> creep.repair()
             Role.HARVESTER -> creep.harvest()
@@ -62,10 +61,11 @@ fun gameLoop() {
             STRUCTURE_TOWER -> towerAction(structure as StructureTower)
         }
     }
-    test(mainSpawn.room)
+    test(mainSpawn)
 }
 
-private fun test(room: Room) {
+private fun test(spawn: StructureSpawn) {
+
 }
 
 private fun towerAction(tower: StructureTower) {
@@ -116,41 +116,24 @@ private fun spawnBigHarvesters(
     }
 
     val body = arrayOf<BodyPartConstant>(
-            WORK,
-            WORK,
-            WORK,
-            WORK,
-            CARRY,
-            CARRY,
-            CARRY,
-            CARRY,
-            CARRY,
-            CARRY,
-            CARRY,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE,
-            MOVE
+            WORK, WORK, WORK, WORK,
+            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
-    if (spawn.room.energyAvailable < body.sumBy { BODYPART_COST[it]!! }) {
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
         return
     }
 
-    val newName = "${role.name}_${Game.time}"
+    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
+        energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
     })
 
     when (code) {
-        OK -> console.log("spawning $newName with body $body")
+        OK -> console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost")
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
         else -> console.log("unhandled error code $code")
     }
@@ -161,7 +144,8 @@ private fun spawnCreeps(
         creeps: Array<Creep>,
         spawn: StructureSpawn
 ) {
-    if (spawn.room.energyAvailable < body.sumBy { BODYPART_COST[it]!! }) {
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
         return
     }
 
@@ -211,7 +195,32 @@ private fun spawnCreeps(
         else -> return
     }
 
-    val newName = "${role.name}_${Game.time}"
+    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> { this.role = role }
+        energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
+    })
+
+    when (code) {
+        OK -> console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost")
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
+        else -> console.log("unhandled error code $code")
+    }
+}
+
+private fun houseKeeping(creeps: Record<String, Creep>) {
+    if (Game.creeps.isEmpty()) return  // this is needed because Memory.creeps is undefined
+
+    for ((creepName, _) in Memory.creeps) {
+        if (creeps[creepName] == null) {
+            console.log("Deleting obsolete memory entry for creep $creepName")
+            delete(Memory.creeps[creepName])
+        }
+    }
+}
+
+private fun determineSpawnEnergyStructures(spawn: StructureSpawn): Array<Structure> {
+    val availableEnergyStructures = spawn.room.find(
             FIND_MY_STRUCTURES,
             options { filter = { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_EXTENSION, STRUCTURE_SPAWN)) } }
     )
@@ -223,25 +232,5 @@ private fun spawnCreeps(
         LEFT -> availableEnergyStructures.sortBy { it.pos.x }
     }
 
-    val code = spawn.spawnCreep(body, newName, options {
-        memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = availableEnergyStructures as Array<StoreOwner>
-    })
-
-    when (code) {
-        OK -> console.log("spawning $newName with body $body")
-        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
-        else -> console.log("unhandled error code $code")
-    }
-}
-
-private fun houseKeeping(creeps: Record<String, Creep>) {
-    if (Game.creeps.isEmpty()) return  // this is needed because Memory.creeps is undefined
-
-    for ((creepName, _) in Memory.creeps) {
-        if (creeps[creepName] == null) {
-            console.log("deleting obsolete memory entry for creep $creepName")
-            delete(Memory.creeps[creepName])
-        }
-    }
+    return availableEnergyStructures
 }
