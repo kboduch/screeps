@@ -212,8 +212,20 @@ private fun spawnCreeps(
     }
 
     val newName = "${role.name}_${Game.time}"
+            FIND_MY_STRUCTURES,
+            options { filter = { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_EXTENSION, STRUCTURE_SPAWN)) } }
+    )
+
+    when (spawn.memory.energyStructuresDirFromToOpposite) {
+        TOP_LEFT, TOP, TOP_RIGHT -> availableEnergyStructures.sortBy { it.pos.y }
+        RIGHT -> availableEnergyStructures.sortByDescending { it.pos.x }
+        BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT -> availableEnergyStructures.sortByDescending { it.pos.y }
+        LEFT -> availableEnergyStructures.sortBy { it.pos.x }
+    }
+
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
+        energyStructures = availableEnergyStructures as Array<StoreOwner>
     })
 
     when (code) {

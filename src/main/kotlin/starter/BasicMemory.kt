@@ -31,3 +31,4 @@ var RoomMemory.numberOfCreeps : Int by memory { 0 }
 
 /* spawn.memory */
 var SpawnMemory.test : Int by memory { 0 }
+var SpawnMemory.energyStructuresDirFromToOpposite : DirectionConstant by memory { LEFT }
