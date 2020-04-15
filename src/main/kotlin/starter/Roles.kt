@@ -39,6 +39,18 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
             )
         }
     } else {
+        val droppedSourcesInRange = fromRoom.find(FIND_DROPPED_RESOURCES, options { filter = { it.resourceType == RESOURCE_ENERGY } })
+                .filter { it.pos.inRangeTo(pos,4) }
+
+        if (droppedSourcesInRange.isNotEmpty()) {
+            when (pickup(droppedSourcesInRange.first())) {
+                ERR_NOT_IN_RANGE -> moveTo(droppedSourcesInRange.first().pos)
+                OK -> memory.building = true
+            }
+
+            return
+        }
+
         val targets = fromRoom.find(FIND_STRUCTURES)
                 .filter { it.isEnergyContainer() }
                 .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
