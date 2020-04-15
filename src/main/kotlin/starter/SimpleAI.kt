@@ -185,7 +185,7 @@ private fun spawnCreeps(
             })
     )
 
-    var minimumUpgraders = 3;
+    var minimumUpgraders = spawn.room.controller?.level ?: 0
 
     val containers = spawn.room.find(FIND_STRUCTURES)
             .filter { it.isEnergyContainer() }
@@ -194,7 +194,7 @@ private fun spawnCreeps(
             spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
             containers.isNotEmpty() && containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! } == containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
     ) {
-        minimumUpgraders = 5
+        minimumUpgraders += 2
     }
 
     val role: Role = when {
