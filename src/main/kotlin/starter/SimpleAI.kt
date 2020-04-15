@@ -27,7 +27,7 @@ fun gameLoop() {
     // build a few extensions so we can have 550 energy
     val controller = mainSpawn.room.controller
     if (controller != null && controller.level >= 2) {
-        when (controller.room.find(FIND_MY_STRUCTURES).count { it.structureType == STRUCTURE_EXTENSION }) {
+        when (controller.room.find(FIND_MY_STRUCTURES).count { it.isStructureTypeOf(STRUCTURE_EXTENSION) }) {
             0 -> controller.room.createConstructionSite(29, 27, STRUCTURE_EXTENSION)
             1 -> controller.room.createConstructionSite(28, 27, STRUCTURE_EXTENSION)
             2 -> controller.room.createConstructionSite(27, 27, STRUCTURE_EXTENSION)
@@ -97,7 +97,7 @@ private fun towerAction(tower: StructureTower) {
         return
     }
 
-    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.structureType == STRUCTURE_ROAD && it.isHpBelowPercent(100) } })
+    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.isStructureTypeOf(STRUCTURE_ROAD) && it.isHpBelowPercent(100) } })
     if (damagedRoads.isNotEmpty()) {
         tower.repair(damagedRoads[0])
 
@@ -171,7 +171,7 @@ private fun spawnCreeps(
             spawn.room.find(FIND_STRUCTURES, options {
                 filter = {
                     (80 > (100 * it.hits / it.hitsMax)) &&
-                            it.structureType != STRUCTURE_CONTROLLER && it.structureType != STRUCTURE_WALL
+                            !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL))
                 }
             })
     )
@@ -180,7 +180,7 @@ private fun spawnCreeps(
             spawn.room.find(FIND_STRUCTURES, options {
                 filter = {
                             500000 > it.hits &&
-                            it.structureType == STRUCTURE_WALL
+                            it.isStructureTypeOf(STRUCTURE_WALL)
                 }
             })
     )

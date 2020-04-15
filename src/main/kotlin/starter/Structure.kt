@@ -1,16 +1,14 @@
 package starter
 
-import screeps.api.STRUCTURE_CONTAINER
-import screeps.api.STRUCTURE_EXTENSION
-import screeps.api.STRUCTURE_SPAWN
-import screeps.api.STRUCTURE_STORAGE
+import screeps.api.*
 import screeps.api.structures.Structure
 
 fun Structure.isEnergyContainer(): Boolean {
-    return this.structureType == STRUCTURE_CONTAINER || this.structureType == STRUCTURE_STORAGE
+    return this.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTAINER, STRUCTURE_STORAGE))
 }
+
 fun Structure.isSpawnEnergyContainer(): Boolean {
-    return this.structureType == STRUCTURE_EXTENSION || this.structureType == STRUCTURE_SPAWN
+    return this.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_EXTENSION, STRUCTURE_SPAWN))
 }
 
 fun Structure.isHpBelowPercent(percent: Int): Boolean {
@@ -19,4 +17,12 @@ fun Structure.isHpBelowPercent(percent: Int): Boolean {
 
 fun Structure.isHpBelow(amount: Int): Boolean {
     return hits < amount
+}
+
+fun Structure.isStructureTypeOf(structureTypes: Array<StructureConstant>): Boolean {
+    return structureTypes.contains(this.structureType)
+}
+
+fun Structure.isStructureTypeOf(structureType: StructureConstant): Boolean {
+    return this.structureType == structureType
 }

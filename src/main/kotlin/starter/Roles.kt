@@ -183,7 +183,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
         var energyContainers = room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
         val myStructures = room.find(FIND_MY_STRUCTURES)
-        val towers = myStructures.filter { it.structureType == STRUCTURE_TOWER && it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY] < TOWER_CAPACITY  }
+        val towers = myStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) && it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY] < TOWER_CAPACITY  }
         val spawn = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
 
         if (towers.isNotEmpty()) {
@@ -225,18 +225,18 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
         val damagedStructures = toRoom.find(
                 FIND_STRUCTURES,
-                options { filter = { it.structureType != STRUCTURE_CONTROLLER && it.hits < it.hitsMax} }
+                options { filter = { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) && it.hits < it.hitsMax} }
         )
 
         var targets = listOf<Structure>()
 
-        val otherDamagedStructures = damagedStructures.filter { it.structureType != STRUCTURE_WALL }
+        val otherDamagedStructures = damagedStructures.filter { !it.isStructureTypeOf(STRUCTURE_WALL) }
 
         if (otherDamagedStructures.isNotEmpty()) {
             targets = otherDamagedStructures
         } else {
             var damagedWalls = damagedStructures.filter {
-                it.structureType == STRUCTURE_WALL
+                it.isStructureTypeOf(STRUCTURE_WALL)
             }
 
             damagedWalls = damagedWalls.filterOrReturnExistingIfEmpty { it.isHpBelowPercent(1) }
