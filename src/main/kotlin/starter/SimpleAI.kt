@@ -19,7 +19,8 @@ fun gameLoop() {
     mainSpawn.room.memory.numberOfCreeps = mainSpawn.room.find(FIND_CREEPS).count()
 
     spawnBigHarvesters(Game.creeps.values, mainSpawn)
-    //make sure we have at least some creeps
+
+    spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn)
     spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn)
     spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn)
 
@@ -96,7 +97,7 @@ private fun towerAction(tower: StructureTower) {
         return
     }
 
-    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.structureType == STRUCTURE_ROAD && it.isHpBelowPercent(80) } })
+    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.structureType == STRUCTURE_ROAD && it.isHpBelowPercent(100) } })
     if (damagedRoads.isNotEmpty()) {
         tower.repair(damagedRoads[0])
 
@@ -202,13 +203,10 @@ private fun spawnCreeps(
 
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
-        spawn.room.find(FIND_MY_STRUCTURES, options { filter = { it.structureType == STRUCTURE_TOWER && it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY] < TOWER_CAPACITY } }).isNotEmpty() &&
-                creeps.count { it.memory.role == Role.BUILDER } < 1 -> Role.BUILDER
-
         spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
                 creeps.count { it.memory.role == Role.BUILDER } < 3 -> Role.BUILDER
 
-        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 1 -> Role.REPAIRER
+        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 2 -> Role.REPAIRER
 
         else -> return
     }
