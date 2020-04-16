@@ -18,11 +18,12 @@ fun gameLoop() {
     // just an example of how to use room memory
     mainSpawn.room.memory.numberOfCreeps = mainSpawn.room.find(FIND_CREEPS).count()
 
-    spawnBigHarvesters(Game.creeps.values, mainSpawn)
-
-    spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn)
-    spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn)
-    spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn)
+    when (true) {
+        spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
+        spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
+        spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
+        spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
+    }
 
     // build a few extensions so we can have 550 energy
     val controller = mainSpawn.room.controller
@@ -109,10 +110,10 @@ private fun towerAction(tower: StructureTower) {
 private fun spawnBigHarvesters(
         creeps: Array<Creep>,
         spawn: StructureSpawn
-) {
+): Boolean {
     val role: Role = when {
         creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
-        else -> return
+        else -> return false
     }
 
     val body = arrayOf<BodyPartConstant>(
@@ -123,7 +124,7 @@ private fun spawnBigHarvesters(
 
     val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
     if (spawn.room.energyAvailable < bodyPartsCost) {
-        return
+        return false
     }
 
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
@@ -132,10 +133,10 @@ private fun spawnBigHarvesters(
         energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
     })
 
-    when (code) {
-        OK -> console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost")
-        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
-        else -> console.log("unhandled error code $code")
+    return when (code) {
+        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> { console.log("unhandled error code $code"); false }
     }
 }
 
@@ -143,10 +144,10 @@ private fun spawnCreeps(
         body: Array<BodyPartConstant>,
         creeps: Array<Creep>,
         spawn: StructureSpawn
-) {
+) : Boolean {
     val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
     if (spawn.room.energyAvailable < bodyPartsCost) {
-        return
+        return false
     }
 
     val damagedStructures = mutableListOf<Structure>()
@@ -192,7 +193,7 @@ private fun spawnCreeps(
 
         damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 2 -> Role.REPAIRER
 
-        else -> return
+        else -> return false
     }
 
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
@@ -201,10 +202,10 @@ private fun spawnCreeps(
         energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
     })
 
-    when (code) {
-        OK -> console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost")
-        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> run { } // do nothing
-        else -> console.log("unhandled error code $code")
+    return when (code) {
+        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> { console.log("unhandled error code $code"); false }
     }
 }
 
