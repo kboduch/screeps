@@ -56,9 +56,8 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
                 .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
 
         if (targets.isNotEmpty()) {
-            if (withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 moveTo(targets[0].pos)
-            }
+                withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY)
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
@@ -91,6 +90,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
     }
 
     val constructionSites = assignedRoom.find(FIND_MY_CONSTRUCTION_SITES)
+        .sortedBy { it.pos.getRangeTo(this.pos) }
 
     if (constructionSites.isEmpty()) {
         //todo deposit energy
@@ -99,9 +99,9 @@ fun Creep.build(assignedRoom: Room = this.room) {
 
     if (memory.building) {
         if (constructionSites.isNotEmpty()) {
-            if (build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(constructionSites[0].pos)
-            }
+            moveTo(constructionSites[0].pos)
+            build(constructionSites[0])
+
             return
         }
     } else {
@@ -109,9 +109,9 @@ fun Creep.build(assignedRoom: Room = this.room) {
         val containers = assignedRoom.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
 
         if (containers.isNotEmpty()) {
-            if (withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(containers[0].pos)
-            }
+            moveTo(containers[0].pos)
+            withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
+
             return
         }
 
@@ -123,9 +123,8 @@ fun Creep.build(assignedRoom: Room = this.room) {
         }
 
         if (activeSourcesInRange.isNotEmpty())
-            if (harvest(activeSourcesInRange[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(activeSourcesInRange[0].pos)
-            }
+            moveTo(activeSourcesInRange[0].pos)
+            harvest(activeSourcesInRange[0])
     }
 }
 
@@ -149,9 +148,8 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
                     .filter { it.isEnergyContainer() }
                     .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
             if (containers.isNotEmpty()) {
-                if (withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    moveTo(containers[0].pos)
-                }
+                moveTo(containers[0].pos)
+                withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
 
                 return
             }
@@ -161,9 +159,8 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
                 .filter { it.pos.inRangeTo(pos,5) }
 
         if (droppedSourcesInRange.isNotEmpty()) {
-            if (pickup(droppedSourcesInRange.first()) == ERR_NOT_IN_RANGE) {
-                moveTo(droppedSourcesInRange.first().pos)
-            }
+            moveTo(droppedSourcesInRange.first().pos)
+            pickup(droppedSourcesInRange.first())
 
             return
         }
@@ -176,9 +173,8 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
 
         if (activeSourcesInRange.isNotEmpty())
-            if (harvest(activeSourcesInRange[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(activeSourcesInRange[0].pos)
-            }
+            moveTo(activeSourcesInRange[0].pos)
+            harvest(activeSourcesInRange[0])
     } else {
 
         var energyContainers = room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
@@ -197,9 +193,8 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
 
         if (energyContainers.isNotEmpty()) {
-            if (transfer(energyContainers[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(energyContainers[0].pos)
-            }
+            moveTo(energyContainers[0].pos)
+            transfer(energyContainers[0] as StoreOwner, RESOURCE_ENERGY)
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
@@ -282,9 +277,8 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
                 .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
 
         if (targets.isNotEmpty()) {
-            if (withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(targets[0].pos)
-            }
+            moveTo(targets[0].pos)
+            withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY)
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
