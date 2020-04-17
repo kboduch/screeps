@@ -191,7 +191,7 @@ private fun spawnCreeps(
         spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
                 creeps.count { it.memory.role == Role.BUILDER } < 3 -> Role.BUILDER
 
-        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 2 -> Role.REPAIRER
+        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 3 -> Role.REPAIRER
 
         else -> return false
     }
