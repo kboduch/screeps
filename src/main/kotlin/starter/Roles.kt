@@ -212,11 +212,31 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
     }
     if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
         memory.building = true
+        this.memory.targetId = null //force acquiring new target
         say("🚧 repair")
     }
 
 
     if (memory.building) {
+        if (null != this.memory.targetId) {
+            val target = Game.getObjectById<Structure>(this.memory.targetId)
+            if (null != target && target.hits < target.hitsMax) {
+                if (repair(target) == ERR_NOT_IN_RANGE) {
+                    moveTo(
+                            target.pos,
+                            options {
+                                visualizePathStyle = screeps.api.options {
+                                    lineStyle = screeps.api.LINE_STYLE_DOTTED
+                                }
+                            }
+                    )
+                }
+
+                return
+            } else {
+                this.memory.targetId = null
+            }
+        }
 
         val damagedStructures = toRoom.find(
                 FIND_STRUCTURES,
@@ -258,16 +278,8 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
         targets = targets.toMutableList().sortedBy { it.hits + it.pos.getRangeTo(this.pos) }
 
         if (targets.isNotEmpty()) {
-            if (repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(
-                        targets[0].pos,
-                        options {
-                            visualizePathStyle = options {
-                                lineStyle = LINE_STYLE_DOTTED
-                            }
-                        }
-                )
-            }
+            this.memory.targetId = targets.first().id
+            this.repair()
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
