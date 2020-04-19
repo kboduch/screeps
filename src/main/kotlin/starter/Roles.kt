@@ -47,6 +47,7 @@ fun Creep.assault(targetRoomName: String) {
             when (attackController(target as StructureController)) {
                 ERR_NOT_IN_RANGE -> moveTo(target.pos, options { visualizePathStyle = options { lineStyle = LINE_STYLE_SOLID } })
                 ERR_INVALID_TARGET -> this.memory.targetId = null
+                ERR_TIRED -> this.memory.targetId = null
             }
         }
         if (!target.isStructureTypeOf(STRUCTURE_CONTROLLER)) {
@@ -62,7 +63,7 @@ fun Creep.assault(targetRoomName: String) {
         val hostileCreepsInRange = this.pos.findInRange(FIND_HOSTILE_CREEPS, 5)
         val hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES)
         val otherHostileStructures = hostileStructures.filter { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) }
-        val hostileController = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_CONTROLLER) }
+        val hostileController = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_CONTROLLER) && (it.unsafeCast<StructureController>().upgradeBlocked < 100 || it.unsafeCast<StructureController>().upgradeBlocked == null) }
         val hostileTowers = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) }
         val hostileSpawn = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_SPAWN) }
 
@@ -96,6 +97,8 @@ fun Creep.assault(targetRoomName: String) {
 
             return
         }
+
+        moveTo(Game.flags["Rally"]!!)
     }
 }
 

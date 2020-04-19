@@ -181,8 +181,10 @@ private fun spawnAssaulter(
         else -> return false
     }
     val body = arrayOf<BodyPartConstant>(
-            ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, CLAIM,
-            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
+            TOUGH, TOUGH, TOUGH, TOUGH,
+            ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
+            CLAIM,
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
     val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
