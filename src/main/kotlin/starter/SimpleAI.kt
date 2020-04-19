@@ -222,10 +222,9 @@ private fun spawnCreeps(
         creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
         creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
-        creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
-
         spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
                 creeps.count { it.memory.role == Role.BUILDER } < 3 -> Role.BUILDER
+        creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
         damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 3 -> Role.REPAIRER
 
