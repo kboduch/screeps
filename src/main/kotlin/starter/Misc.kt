@@ -16,6 +16,7 @@ fun <T> List<T>.filterOrReturnExistingIfEmpty(predicate: (T) -> Boolean): List<T
 
 object CurrentGameState {
     val roomStates: MutableMap<String, CurrentRoomState> = mutableMapOf()
+    var assaultTargetRoomName: String? = null
 }
 
 class CurrentRoomState(val room: Room) {
@@ -68,7 +69,7 @@ class CurrentRoomState(val room: Room) {
         droppedResources = room.find(FIND_DROPPED_RESOURCES).toList()
         droppedEnergyResources = droppedResources.filter { it.resourceType == RESOURCE_ENERGY }
 
-        activeEnergySources = room.find(FIND_SOURCES_ACTIVE).toList()
+        activeEnergySources = room.find(FIND_SOURCES_ACTIVE, options { filter = { it.energy > 0} }).toList()
     }
 
     private fun determineSpawnEnergyStructures(spawn: StructureSpawn): List<Structure> {

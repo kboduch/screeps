@@ -20,7 +20,16 @@ fun gameLoop() {
     //store it globally for all creeps to be able to access, instead of recalculating the same thing over and over for each creep
 
     Game.rooms.values.forEach { room: Room ->
-        CurrentGameState.roomStates[room.name] = CurrentRoomState(room)
+        //todo fix
+        if (room.name == "E41S32") {
+            CurrentGameState.roomStates[room.name] = CurrentRoomState(room)
+        }
+    }
+
+    Game.flags.values.forEach { flag ->
+        if (flag.name == "Assault" && flag.memory.roomName != null ) {
+            CurrentGameState.assaultTargetRoomName = flag.memory.roomName
+        }
     }
 
     CurrentGameState.roomStates.forEach {(roomName, currentRoomState) ->
@@ -39,6 +48,7 @@ fun gameLoop() {
 
     when (true) {
         spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
+        CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
         spawnTrucker(Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
@@ -68,7 +78,11 @@ fun gameLoop() {
 
 
     for ((_, creep) in Game.creeps) {
+        if (creep.spawning) {
+            continue
+        }
         when (creep.memory.role) {
+            Role.ASSAULTER -> { CurrentGameState.assaultTargetRoomName?.isNotBlank().let { creep.assault(CurrentGameState.assaultTargetRoomName!!) }  }
             Role.REPAIRER -> creep.repair()
             Role.TRUCKER -> creep.truck()
             Role.HARVESTER -> creep.harvest()
@@ -133,6 +147,40 @@ private fun spawnTrucker(
     val body = arrayOf<BodyPartConstant>(
             CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
+    )
+
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
+        return false
+    }
+
+    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> { this.role = role }
+        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+    })
+
+    return when (code) {
+        OK -> {
+            console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+        }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> {
+            console.log("unhandled error code $code"); false
+        }
+    }
+}
+private fun spawnAssaulter(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+):Boolean {
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.ASSAULTER } < 2 -> Role.ASSAULTER
+        else -> return false
+    }
+    val body = arrayOf<BodyPartConstant>(
+            ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, CLAIM,
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
     val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }

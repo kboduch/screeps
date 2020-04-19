@@ -11,7 +11,91 @@ enum class Role {
     BUILDER,
     UPGRADER,
     REPAIRER,
-    TRUCKER
+    TRUCKER,
+    ASSAULTER
+}
+
+fun Creep.assault(targetRoomName: String) {
+    if (this.pos.roomName != targetRoomName) {
+        //todo optimize
+        val route = Game.map.findRoute(this.pos.roomName, targetRoomName);
+        if(route.value != null && route.value!!.isNotEmpty()) {
+            console.log("Now heading to room ${route.value!![0].room}")
+            val exit = this.pos.findClosestByRange(route.value!![0].exit)
+            this.moveTo(
+                    exit!!,
+                    options {
+                        visualizePathStyle = options {
+                            lineStyle = LINE_STYLE_SOLID
+                        }
+                    }
+            )
+
+            return
+        }
+
+        console.log("No route found to $targetRoomName")
+
+        return
+    }
+
+    val target = Game.getObjectById<Structure>(this.memory.targetId)
+    if (null != target) {
+
+        if (target.isStructureTypeOf(STRUCTURE_CONTROLLER)) {
+            when (attackController(target as StructureController)) {
+                ERR_NOT_IN_RANGE -> moveTo(target.pos, options { visualizePathStyle = options { lineStyle = LINE_STYLE_SOLID } })
+                ERR_INVALID_TARGET -> this.memory.targetId = null
+            }
+        }
+        if (!target.isStructureTypeOf(STRUCTURE_CONTROLLER)) {
+            when (attack(target)) {
+                ERR_NOT_IN_RANGE -> moveTo(target.pos, options { visualizePathStyle = options { lineStyle = LINE_STYLE_SOLID } })
+                ERR_INVALID_TARGET -> this.memory.targetId = null
+            }
+        }
+
+        return
+    } else {
+        this.memory.targetId = null
+        val hostileCreepsInRange = this.pos.findInRange(FIND_HOSTILE_CREEPS, 5)
+        val hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES)
+        val otherHostileStructures = hostileStructures.filter { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) }
+        val hostileController = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_CONTROLLER) }
+        val hostileTowers = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) }
+        val hostileSpawn = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+
+
+        if (hostileController.isNotEmpty()) {
+            this.memory.targetId = hostileController.minBy { it.pos.getRangeTo(this) }!!.id
+
+            return
+        }
+
+        if (hostileTowers.isNotEmpty()) {
+            this.memory.targetId = hostileTowers.minBy { it.pos.getRangeTo(this) }!!.id
+
+            return
+        }
+
+        if (hostileSpawn.isNotEmpty()) {
+            this.memory.targetId = hostileSpawn.minBy { it.pos.getRangeTo(this) }!!.id
+
+            return
+        }
+
+        if (hostileCreepsInRange.isNotEmpty()) {
+            this.memory.targetId = hostileCreepsInRange.minBy { it.pos.getRangeTo(this) }!!.id
+
+            return
+        }
+
+        if (otherHostileStructures.isNotEmpty()) {
+            this.memory.targetId = otherHostileStructures.minBy { it.pos.getRangeTo(this) }!!.id
+
+            return
+        }
+    }
 }
 
 fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
@@ -133,6 +217,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
     }
 }
 
+//TODO renew this creep
 fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
@@ -164,6 +249,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
 
         //todo extract `find and harvest` logic
+        //todo add > 0
         var activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.isNearTo(this) }
 
         if (activeSourcesInRange.isEmpty()) {

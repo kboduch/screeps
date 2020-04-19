@@ -26,6 +26,7 @@ var PowerCreepMemory.test : Int by memory { 0 }
 
 /* flag.memory */
 var FlagMemory.test : Int by memory { 0 }
+var FlagMemory.roomName : String? by memory ()
 
 /* room.memory */
 var RoomMemory.numberOfCreeps : Int by memory { 0 }
