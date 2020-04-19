@@ -100,6 +100,7 @@ fun gameLoop() {
     test(mainSpawn)
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun test(spawn: StructureSpawn) {
 
 }
@@ -128,11 +129,13 @@ private fun towerAction(tower: StructureTower) {
         return
     }
 
-    val damagedRoads = currentRoomState.damagedStructures.filter { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_ROAD, STRUCTURE_CONTAINER)) && it.isHpBelowPercent(100) }
-    if (damagedRoads.isNotEmpty()) {
-        tower.repair(damagedRoads[0])
+    if (tower.store.getUsedCapacity(RESOURCE_ENERGY) > TOWER_CAPACITY - 250) {
+        val damagedStructures = currentRoomState.damagedStructures.filter { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_ROAD, STRUCTURE_CONTAINER, STRUCTURE_RAMPART)) && it.isHpBelowPercent(100) }
+        if (damagedStructures.isNotEmpty()) {
+            tower.repair(damagedStructures[0])
 
-        return
+            return
+        }
     }
 }
 
@@ -157,7 +160,7 @@ private fun spawnTrucker(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 
     return when (code) {
@@ -191,7 +194,7 @@ private fun spawnAssaulter(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 
     return when (code) {
@@ -229,7 +232,7 @@ private fun spawnBigHarvesters(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 
     return when (code) {
@@ -254,7 +257,7 @@ private fun spawnCreeps(
 
     val damagedStructures = mutableListOf<Structure>()
     damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL)) })
-    damagedStructures.addAll(currentRoomState.damagedStructures.filter { !it.isHpBelow(50000) && it.isStructureTypeOf(STRUCTURE_WALL) })
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(1) && it.isStructureTypeOf(STRUCTURE_WALL) })
 
     var minimumUpgraders = spawn.room.controller?.level ?: 0
 
@@ -282,7 +285,7 @@ private fun spawnCreeps(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 
     return when (code) {

@@ -69,7 +69,7 @@ class CurrentRoomState(val room: Room) {
         droppedResources = room.find(FIND_DROPPED_RESOURCES).toList()
         droppedEnergyResources = droppedResources.filter { it.resourceType == RESOURCE_ENERGY }
 
-        activeEnergySources = room.find(FIND_SOURCES_ACTIVE, options { filter = { it.energy > 0} }).toList()
+        activeEnergySources = room.find(FIND_SOURCES_ACTIVE).toList()
     }
 
     private fun determineSpawnEnergyStructures(spawn: StructureSpawn): List<Structure> {

@@ -98,7 +98,7 @@ fun Creep.assault(targetRoomName: String) {
     }
 }
 
-fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
+fun Creep.upgrade(assignedRoom: Room = this.room, controller: StructureController) {
 
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
@@ -112,6 +112,9 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
         say("🚧 upgrade")
     }
 
+    val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
+
     if (memory.building) {
         if (upgradeController(controller) == ERR_NOT_IN_RANGE) {
             moveTo(
@@ -124,8 +127,7 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
             )
         }
     } else {
-        val droppedSourcesInRange = fromRoom.find(FIND_DROPPED_RESOURCES, options { filter = { it.resourceType == RESOURCE_ENERGY } })
-                .filter { it.pos.inRangeTo(pos,4) }
+        val droppedSourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(this.pos, 4) }
 
         if (droppedSourcesInRange.isNotEmpty()) {
             when (pickup(droppedSourcesInRange.first())) {
@@ -136,13 +138,12 @@ fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
             return
         }
 
-        val targets = fromRoom.find(FIND_STRUCTURES)
-                .filter { it.isEnergyContainer() }
-                .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
+        val nonEmptyEnergyResourcesContainers = currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
 
-        if (targets.isNotEmpty()) {
-                moveTo(targets[0].pos)
-                withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY)
+        if (nonEmptyEnergyResourcesContainers.isNotEmpty()) {
+            when(withdraw(nonEmptyEnergyResourcesContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)){
+                ERR_NOT_IN_RANGE ->moveTo(nonEmptyEnergyResourcesContainers.first().pos)
+            }
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
@@ -199,7 +200,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
 
         if (containers.isNotEmpty()) {
             moveTo(containers[0].pos)
-            withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
+            withdraw(containers[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
 
             return
         }
@@ -249,16 +250,17 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
 
         //todo extract `find and harvest` logic
-        //todo add > 0
         var activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.isNearTo(this) }
 
         if (activeSourcesInRange.isEmpty()) {
             activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.getSteppableAdjacent(true).isNotEmpty() }
         }
 
-        if (activeSourcesInRange.isNotEmpty())
-            moveTo(activeSourcesInRange[0].pos)
-            harvest(activeSourcesInRange[0])
+        if (activeSourcesInRange.isNotEmpty()) {
+            when (harvest(activeSourcesInRange[0])) {
+                ERR_NOT_IN_RANGE -> moveTo(activeSourcesInRange[0].pos)
+            }
+        }
     } else {
         //store
         var energyContainers = currentToRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
@@ -368,7 +370,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
         if (targets.isNotEmpty()) {
             moveTo(targets[0].pos)
-            withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY)
+            withdraw(targets[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
         }
@@ -390,19 +392,6 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 
     val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
             ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
-
-//    if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
-//        val containers = assignedRoom.find(FIND_STRUCTURES)
-//                .filter { it.isEnergyContainer() }
-//                .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
-//        if (containers.isNotEmpty()) {
-//            moveTo(containers[0].pos)
-//            withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
-//
-//            return
-//        }
-//    }
-
 
     if (memory.building) {
         //storing
@@ -432,7 +421,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         moveTo(Game.flags["park"]!!)
     } else {
         //search and load
-        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 5) }
+        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 10) }
 
         if (droppedEnergySourcesInRange.isNotEmpty()) {
             if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
