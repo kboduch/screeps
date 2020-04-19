@@ -20,8 +20,7 @@ fun gameLoop() {
     //store it globally for all creeps to be able to access, instead of recalculating the same thing over and over for each creep
 
     Game.rooms.values.forEach { room: Room ->
-        //todo fix
-        if (room.name == "E41S32") {
+        if (room.controller != null && room.controller!!.my) {
             CurrentGameState.roomStates[room.name] = CurrentRoomState(room)
         }
     }
