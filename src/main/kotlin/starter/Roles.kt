@@ -238,24 +238,8 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     val currentToRoomState = CurrentGameState.roomStates[toRoom.name]
             ?: throw RuntimeException("Missing current room status for ${toRoom.name}")
 
-    if (memory.renewing || this.ticksToLive < 50) {
-        memory.renewing = true
-
-        val spawn = currentToRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
-        if (spawn != null) {
-            when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
-                OK -> {}
-                ERR_FULL -> { memory.renewing = false; console.log("Creep renewed. Resuming work.") }
-                ERR_NOT_ENOUGH_ENERGY -> { console.log("Waiting for the spawn to get more energy") }
-                ERR_BUSY -> { console.log("Waiting for the spawn to finish work") }
-                ERR_NOT_IN_RANGE -> moveTo(spawn)
-                else -> {
-                    console.log("unhandled error code $returnCode")
-                }
-            }
-
-            return
-        }
+    if (this.needsRenewing(currentToRoomState, 50)) {
+        return
     }
 
     if (!memory.building) {
@@ -472,4 +456,29 @@ fun Creep.truck(assignedRoom: Room = this.room) {
             moveTo(Game.flags["park"]!!)
         }
     }
+}
+
+private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicksToLive: Int = 50): Boolean {
+    if (this.memory.renewing || this.ticksToLive < minimumTicksToLive) {
+        this.memory.renewing = true
+
+        val spawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+        if (spawn != null) {
+            when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
+                OK -> {}
+                ERR_NOT_ENOUGH_ENERGY -> console.log("Waiting for the spawn to get more energy")
+                ERR_BUSY -> console.log("Waiting for the spawn to finish work")
+                ERR_NOT_IN_RANGE -> this.moveTo(spawn)
+                ERR_FULL -> {
+                    this.memory.renewing = false;
+                    console.log("Creep renewed. Resuming work.");
+                }
+                else -> console.log("Unhandled error code $returnCode")
+            }
+        } else {
+            this.memory.renewing = false;
+        }
+    }
+
+    return this.memory.renewing
 }
