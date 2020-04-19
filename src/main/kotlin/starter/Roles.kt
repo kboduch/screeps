@@ -277,8 +277,9 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
 
         if (energyContainers.isNotEmpty()) {
-            moveTo(energyContainers.first().pos)
-            transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
+            when (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)) {
+                ERR_NOT_IN_RANGE -> moveTo(energyContainers.first().pos)
+            }
         } else {
             moveTo(Game.flags["park"]!!)
         }
@@ -396,6 +397,10 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 
     val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
             ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
+
+    if (this.needsRenewing(currentRoomState, 100)) {
+        return
+    }
 
     if (memory.building) {
         //storing
