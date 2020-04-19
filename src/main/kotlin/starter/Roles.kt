@@ -3,6 +3,7 @@ package starter
 import screeps.api.*
 import screeps.api.structures.Structure
 import screeps.api.structures.StructureController
+import screeps.api.structures.StructureSpawn
 
 
 enum class Role {
@@ -218,7 +219,6 @@ fun Creep.build(assignedRoom: Room = this.room) {
     }
 }
 
-//TODO renew this creep
 fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
@@ -237,6 +237,26 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
     val currentToRoomState = CurrentGameState.roomStates[toRoom.name]
             ?: throw RuntimeException("Missing current room status for ${toRoom.name}")
+
+    if (memory.renewing || this.ticksToLive < 50) {
+        memory.renewing = true
+
+        val spawn = currentToRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+        if (spawn != null) {
+            when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
+                OK -> {}
+                ERR_FULL -> { memory.renewing = false; console.log("Creep renewed. Resuming work.") }
+                ERR_NOT_ENOUGH_ENERGY -> { console.log("Waiting for the spawn to get more energy") }
+                ERR_BUSY -> { console.log("Waiting for the spawn to finish work") }
+                ERR_NOT_IN_RANGE -> moveTo(spawn)
+                else -> {
+                    console.log("unhandled error code $returnCode")
+                }
+            }
+
+            return
+        }
+    }
 
     if (!memory.building) {
         //harvest
