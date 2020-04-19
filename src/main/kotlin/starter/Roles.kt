@@ -10,7 +10,8 @@ enum class Role {
     HARVESTER,
     BUILDER,
     UPGRADER,
-    REPAIRER
+    REPAIRER,
+    TRUCKER
 }
 
 fun Creep.upgrade(fromRoom: Room = this.room, controller: StructureController) {
@@ -144,22 +145,15 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         say("storing")
     }
 
+    val currentFromRoomState = CurrentGameState.roomStates[fromRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${fromRoom.name}")
+
+    val currentToRoomState = CurrentGameState.roomStates[toRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${toRoom.name}")
+
     if (!memory.building) {
-
-        if (body.sumBy { BODYPART_COST[it.type]!! } < 1000 && toRoom.energyAvailable < toRoom.energyCapacityAvailable) {
-            val containers = toRoom.find(FIND_STRUCTURES)
-                    .filter { it.isEnergyContainer() }
-                    .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
-            if (containers.isNotEmpty()) {
-                moveTo(containers[0].pos)
-                withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
-
-                return
-            }
-        }
-
-        val droppedSourcesInRange = fromRoom.find(FIND_DROPPED_RESOURCES, options { filter = { it.resourceType == RESOURCE_ENERGY } })
-                .filter { it.pos.inRangeTo(pos,5) }
+        //harvest
+        val droppedSourcesInRange = currentFromRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos,5) }
 
         if (droppedSourcesInRange.isNotEmpty()) {
             moveTo(droppedSourcesInRange.first().pos)
@@ -169,37 +163,31 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
 
         //todo extract `find and harvest` logic
-        var activeSourcesInRange = this.pos.findInRange(FIND_SOURCES_ACTIVE, 1)
+        var activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.isNearTo(this) }
 
         if (activeSourcesInRange.isEmpty()) {
-            activeSourcesInRange = fromRoom.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
+            activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.getSteppableAdjacent(true).isNotEmpty() }
         }
 
         if (activeSourcesInRange.isNotEmpty())
             moveTo(activeSourcesInRange[0].pos)
             harvest(activeSourcesInRange[0])
     } else {
+        //store
+        var energyContainers = currentToRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
+        val spawnsAndExtensions = currentToRoomState.myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
 
-        var energyContainers = room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
-        val myStructures = room.find(FIND_MY_STRUCTURES)
-        val towers = myStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) && it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY] < TOWER_CAPACITY  }
-        val spawn = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
-
-        if (towers.isNotEmpty()) {
-            energyContainers = towers
-        }
-
-        if (spawn.isNotEmpty()) {
-            energyContainers = spawn
+        if (spawnsAndExtensions.isNotEmpty()) {
+            energyContainers = spawnsAndExtensions
         }
 
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
 
         if (energyContainers.isNotEmpty()) {
-            moveTo(energyContainers[0].pos)
-            transfer(energyContainers[0] as StoreOwner, RESOURCE_ENERGY)
+            moveTo(energyContainers.first().pos)
+            transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
         } else {
-            moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
+            moveTo(Game.flags["park"]!!)
         }
     }
 }
@@ -296,6 +284,96 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
             withdraw(targets[0] as StoreOwner, RESOURCE_ENERGY)
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
+        }
+    }
+}
+
+fun Creep.truck(assignedRoom: Room = this.room) {
+    if (null == store.getCapacity(RESOURCE_ENERGY))
+        return
+
+    if (memory.building && store[RESOURCE_ENERGY] == 0) {
+        memory.building = false
+        say("🔄search and load")
+    }
+    if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
+        memory.building = true
+        say("🚧storing")
+    }
+
+    val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
+
+//    if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
+//        val containers = assignedRoom.find(FIND_STRUCTURES)
+//                .filter { it.isEnergyContainer() }
+//                .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!!}
+//        if (containers.isNotEmpty()) {
+//            moveTo(containers[0].pos)
+//            withdraw(containers[0] as StoreOwner, RESOURCE_ENERGY)
+//
+//            return
+//        }
+//    }
+
+
+    if (memory.building) {
+        //storing
+        var energyContainers = currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_STORAGE) && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
+        val myStructures = currentRoomState.myStructures
+        val towers = myStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 200  }
+        val spawnsAndExtensions = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
+
+        if (spawnsAndExtensions.isNotEmpty()) {
+            energyContainers = spawnsAndExtensions
+        }
+
+        if (towers.isNotEmpty()) {
+            energyContainers = towers
+        }
+
+        energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
+
+        if (energyContainers.isNotEmpty()) {
+            if (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                moveTo(energyContainers.first().pos)
+            }
+
+            return
+        }
+
+        moveTo(Game.flags["park"]!!)
+    } else {
+        //search and load
+        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 5) }
+
+        if (droppedEnergySourcesInRange.isNotEmpty()) {
+            if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
+                moveTo(droppedEnergySourcesInRange.first().pos)
+            }
+
+            return
+        }
+
+        // include storage when room's construction energy levels are lower then max
+        val nonEmptyEnergyContainerStructures = if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
+            currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+        } else {
+            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+        }
+
+        if (nonEmptyEnergyContainerStructures.isNotEmpty()) {
+            if (withdraw(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                moveTo(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>().pos)
+            }
+
+            return
+        }
+
+        if (this.store.getUsedCapacity() > 0) {
+            this.memory.building = !this.memory.building
+        } else {
+            moveTo(Game.flags["park"]!!)
         }
     }
 }

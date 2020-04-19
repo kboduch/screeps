@@ -38,10 +38,18 @@ class CurrentRoomState(val room: Room) {
 
     val spawnEnergyStructures: Map<String, List<Structure>>
 
+    val myStructures: List<Structure>
+
+    val droppedEnergyResources: List<Resource>
+
+    val activeEnergySources: List<Source>
+
     private val structures: Array<Structure>
+    private val droppedResources: List<Resource>
 
     init {
         structures = room.find(FIND_STRUCTURES)
+        myStructures = structures.filter { it.my }
         roomName = room.name
         damagedStructures = structures.filter { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) && it.hits < it.hitsMax }
         energyContainers = structures.filter { it.isEnergyContainer() }
@@ -56,6 +64,11 @@ class CurrentRoomState(val room: Room) {
         this.spawnEnergyStructures = spawnEnergyStructures.toMap()
 
         constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).toList()
+
+        droppedResources = room.find(FIND_DROPPED_RESOURCES).toList()
+        droppedEnergyResources = droppedResources.filter { it.resourceType == RESOURCE_ENERGY }
+
+        activeEnergySources = room.find(FIND_SOURCES_ACTIVE).toList()
     }
 
     private fun determineSpawnEnergyStructures(spawn: StructureSpawn): List<Structure> {

@@ -39,6 +39,7 @@ fun gameLoop() {
 
     when (true) {
         spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
+        spawnTrucker(Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
@@ -69,6 +70,7 @@ fun gameLoop() {
     for ((_, creep) in Game.creeps) {
         when (creep.memory.role) {
             Role.REPAIRER -> creep.repair()
+            Role.TRUCKER -> creep.truck()
             Role.HARVESTER -> creep.harvest()
             Role.BUILDER -> creep.build()
             Role.UPGRADER -> creep.upgrade(controller = mainSpawn.room.controller!!)
@@ -117,6 +119,41 @@ private fun towerAction(tower: StructureTower) {
         tower.repair(damagedRoads[0])
 
         return
+    }
+}
+
+private fun spawnTrucker(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+):Boolean {
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.TRUCKER } < 2 -> Role.TRUCKER
+        else -> return false
+    }
+    val body = arrayOf<BodyPartConstant>(
+            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
+    )
+
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
+        return false
+    }
+
+    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> { this.role = role }
+        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
+    })
+
+    return when (code) {
+        OK -> {
+            console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+        }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> {
+            console.log("unhandled error code $code"); false
+        }
     }
 }
 
@@ -183,6 +220,7 @@ private fun spawnCreeps(
     val role: Role = when {
 
         creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
+        creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
