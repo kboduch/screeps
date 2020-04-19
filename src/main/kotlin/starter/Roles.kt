@@ -103,8 +103,9 @@ fun Creep.build(assignedRoom: Room = this.room) {
 
     if (memory.building) {
         if (constructionSites.isNotEmpty()) {
-            moveTo(constructionSites[0].pos)
-            build(constructionSites[0])
+            if(build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
+                moveTo(constructionSites[0].pos)
+            }
 
             return
         }
