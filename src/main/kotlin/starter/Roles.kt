@@ -89,7 +89,10 @@ fun Creep.build(assignedRoom: Room = this.room) {
         say("🚧 build")
     }
 
-    val constructionSites = assignedRoom.find(FIND_MY_CONSTRUCTION_SITES)
+    val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
+
+    val constructionSites = currentRoomState.constructionSites
         .sortedBy { it.pos.getRangeTo(this.pos) }
 
     if (constructionSites.isEmpty()) {
@@ -106,7 +109,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
         }
     } else {
 
-        val containers = assignedRoom.find(FIND_STRUCTURES).filter { it.isEnergyContainer() && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+        val containers = currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
 
         if (containers.isNotEmpty()) {
             moveTo(containers[0].pos)

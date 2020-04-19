@@ -10,13 +10,32 @@ import screeps.utils.unsafe.delete
 import screeps.utils.unsafe.jsObject
 
 fun gameLoop() {
+    //gather info
+    //damaged structures //walls,ramparts,other structures
+    //global wall hp level
+    //available energy sources
+    //empty containers
+    // find what else
+    //
+    //store it globally for all creeps to be able to access, instead of recalculating the same thing over and over for each creep
+
+    Game.rooms.values.forEach { room: Room ->
+        CurrentGameState.roomStates[room.name] = CurrentRoomState(room)
+    }
+
+    CurrentGameState.roomStates.forEach {(roomName, currentRoomState) ->
+        currentRoomState.room.visual.text(
+                "$roomName ${currentRoomState.room.energyAvailable}/${currentRoomState.room.energyCapacityAvailable} ${currentRoomState.energyContainersTotalLevel}/${currentRoomState.energyContainersTotalMaximumLevel}",
+                0.0,
+                0.0,
+                options { align = screeps.api.TEXT_ALIGN_LEFT }
+        )
+    }
+
     val mainSpawn: StructureSpawn = Game.spawns.values.firstOrNull() ?: return
 
     //delete memories of creeps that have passed away
     houseKeeping(Game.creeps)
-
-    // just an example of how to use room memory
-    mainSpawn.room.memory.numberOfCreeps = mainSpawn.room.find(FIND_CREEPS).count()
 
     when (true) {
         spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
@@ -25,27 +44,27 @@ fun gameLoop() {
         spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
     }
 
+    //todo write a spawning logic
+    // o is extension, x is road, S is spawn
+    // x o x o x
+    // o x S x o
+    // x o x o x
+    // o x o x o
     // build a few extensions so we can have 550 energy
-    val controller = mainSpawn.room.controller
-    if (controller != null && controller.level >= 2) {
-        when (controller.room.find(FIND_MY_STRUCTURES).count { it.isStructureTypeOf(STRUCTURE_EXTENSION) }) {
-            0 -> controller.room.createConstructionSite(29, 27, STRUCTURE_EXTENSION)
-            1 -> controller.room.createConstructionSite(28, 27, STRUCTURE_EXTENSION)
-            2 -> controller.room.createConstructionSite(27, 27, STRUCTURE_EXTENSION)
-            3 -> controller.room.createConstructionSite(26, 27, STRUCTURE_EXTENSION)
-            4 -> controller.room.createConstructionSite(25, 27, STRUCTURE_EXTENSION)
-            5 -> controller.room.createConstructionSite(24, 27, STRUCTURE_EXTENSION)
-            6 -> controller.room.createConstructionSite(23, 27, STRUCTURE_EXTENSION)
-        }
-    }
+//    val controller = mainSpawn.room.controller
+//    if (controller != null && controller.level >= 2) {
+//        when (controller.room.find(FIND_MY_STRUCTURES).count { it.isStructureTypeOf(STRUCTURE_EXTENSION) }) {
+//            0 -> controller.room.createConstructionSite(29, 27, STRUCTURE_EXTENSION)
+//            1 -> controller.room.createConstructionSite(28, 27, STRUCTURE_EXTENSION)
+//            2 -> controller.room.createConstructionSite(27, 27, STRUCTURE_EXTENSION)
+//            3 -> controller.room.createConstructionSite(26, 27, STRUCTURE_EXTENSION)
+//            4 -> controller.room.createConstructionSite(25, 27, STRUCTURE_EXTENSION)
+//            5 -> controller.room.createConstructionSite(24, 27, STRUCTURE_EXTENSION)
+//            6 -> controller.room.createConstructionSite(23, 27, STRUCTURE_EXTENSION)
+//        }
+//    }
 
-    val containers = mainSpawn.room.find(FIND_STRUCTURES).filter { it.isEnergyContainer() }
-    mainSpawn.room.visual.text(
-            "${Game.time} ${mainSpawn.room.energyAvailable}/${mainSpawn.room.energyCapacityAvailable} ${containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }}/${containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }}",
-            0.0,
-            0.0,
-            options { align = TEXT_ALIGN_LEFT }
-    )
+
 
     for ((_, creep) in Game.creeps) {
         when (creep.memory.role) {
@@ -70,9 +89,10 @@ private fun test(spawn: StructureSpawn) {
 }
 
 private fun towerAction(tower: StructureTower) {
-    val hostileRange = 10
-    val friendlyRange = 20
+    val hostileRange = 15
 
+    val currentRoomState = CurrentGameState.roomStates[tower.room.name]
+            ?: throw RuntimeException("Missing current room status for ${tower.room.name}")
 
     tower.room.visual
             .circle(tower.pos, options {
@@ -82,13 +102,7 @@ private fun towerAction(tower: StructureTower) {
                 lineStyle = LINE_STYLE_DOTTED
                 opacity = 0.15
             })
-            .circle(tower.pos, options {
-                radius = friendlyRange.toDouble()
-                fill = "transparent"
-                stroke = "green"
-                lineStyle = LINE_STYLE_DOTTED
-                opacity = 0.15
-            })
+
 
     val hostileCreeps = tower.pos.findInRange(FIND_HOSTILE_CREEPS, hostileRange)
     if (hostileCreeps.isNotEmpty()) {
@@ -98,7 +112,7 @@ private fun towerAction(tower: StructureTower) {
         return
     }
 
-    val damagedRoads = tower.pos.findInRange(FIND_STRUCTURES, friendlyRange, options { filter = { it.isStructureTypeOf(STRUCTURE_ROAD) && it.isHpBelowPercent(100) } })
+    val damagedRoads = currentRoomState.damagedStructures.filter { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_ROAD, STRUCTURE_CONTAINER)) && it.isHpBelowPercent(100) }
     if (damagedRoads.isNotEmpty()) {
         tower.repair(damagedRoads[0])
 
@@ -130,7 +144,7 @@ private fun spawnBigHarvesters(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
     })
 
     return when (code) {
@@ -150,34 +164,18 @@ private fun spawnCreeps(
         return false
     }
 
+    val currentRoomState = CurrentGameState.roomStates[spawn.room.name]
+            ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
+
     val damagedStructures = mutableListOf<Structure>()
-
-    damagedStructures.addAll(
-            spawn.room.find(FIND_STRUCTURES, options {
-                filter = {
-                    (80 > (100 * it.hits / it.hitsMax)) &&
-                            !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL))
-                }
-            })
-    )
-
-    damagedStructures.addAll(
-            spawn.room.find(FIND_STRUCTURES, options {
-                filter = {
-                            500000 > it.hits &&
-                            it.isStructureTypeOf(STRUCTURE_WALL)
-                }
-            })
-    )
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL)) })
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { !it.isHpBelow(50000) && it.isStructureTypeOf(STRUCTURE_WALL) })
 
     var minimumUpgraders = spawn.room.controller?.level ?: 0
 
-    val containers = spawn.room.find(FIND_STRUCTURES)
-            .filter { it.isEnergyContainer() }
-
     if (
             spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
-            containers.isNotEmpty() && containers.sumBy { it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! } == containers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
+            currentRoomState.energyContainers.isNotEmpty() && currentRoomState.energyContainersTotalLevel == currentRoomState.energyContainersTotalMaximumLevel
     ) {
         minimumUpgraders += 2
     }
@@ -199,7 +197,7 @@ private fun spawnCreeps(
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
-        energyStructures = determineSpawnEnergyStructures(spawn) as Array<StoreOwner>
+        energyStructures = getSpawnEnergyStructures(spawn) as Array<StoreOwner>
     })
 
     return when (code) {
@@ -220,18 +218,13 @@ private fun houseKeeping(creeps: Record<String, Creep>) {
     }
 }
 
-private fun determineSpawnEnergyStructures(spawn: StructureSpawn): Array<Structure> {
-    val availableEnergyStructures = spawn.room.find(
-            FIND_MY_STRUCTURES,
-            options { filter = { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_EXTENSION, STRUCTURE_SPAWN)) } }
-    )
+private fun getSpawnEnergyStructures(spawn: StructureSpawn): Array<Structure> {
 
-    when (spawn.memory.energyStructuresDirFromToOpposite) {
-        TOP_LEFT, TOP, TOP_RIGHT -> availableEnergyStructures.sortBy { it.pos.y }
-        RIGHT -> availableEnergyStructures.sortByDescending { it.pos.x }
-        BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT -> availableEnergyStructures.sortByDescending { it.pos.y }
-        LEFT -> availableEnergyStructures.sortBy { it.pos.x }
-    }
+    val currentRoomState = CurrentGameState.roomStates[spawn.room.name]
+            ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
 
-    return availableEnergyStructures
+    val spawnEnergyStructures = currentRoomState.spawnEnergyStructures[spawn.id]
+            ?: throw RuntimeException("Missing spawn energy structures configuration")
+
+    return spawnEnergyStructures.toTypedArray()
 }
