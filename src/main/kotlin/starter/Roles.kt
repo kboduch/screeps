@@ -474,8 +474,8 @@ private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicks
         if (spawn != null) {
             when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
                 OK -> {}
-                ERR_NOT_ENOUGH_ENERGY -> console.log("Waiting for the spawn to get more energy")
-                ERR_BUSY -> console.log("Waiting for the spawn to finish work")
+                ERR_NOT_ENOUGH_ENERGY -> { console.log("Waiting for the spawn to get more energy"); return false}
+                ERR_BUSY -> { console.log("Waiting for the spawn to finish work"); return false }
                 ERR_NOT_IN_RANGE -> this.moveTo(spawn)
                 ERR_FULL -> {
                     this.memory.renewing = false;
