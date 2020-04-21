@@ -84,3 +84,11 @@ class CurrentRoomState(val room: Room) {
         }
     }
 }
+
+class WeightedStructureTypeComparator(private val weightMap: Map<StructureConstant, Int>): Comparator<Structure> {
+    override fun compare(a: Structure, b: Structure): Int = when {
+        weightMap[a.structureType] > weightMap[b.structureType] -> 1
+        weightMap[a.structureType] < weightMap[b.structureType] -> -1
+        else -> 0
+    }
+}

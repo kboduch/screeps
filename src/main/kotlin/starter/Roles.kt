@@ -142,11 +142,17 @@ fun Creep.upgrade(assignedRoom: Room = this.room, controller: StructureControlle
             return
         }
 
-        val nonEmptyEnergyResourcesContainers = currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+        val nonEmptyEnergyResourcesContainers = currentRoomState.energyContainers
+                .filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         if (nonEmptyEnergyResourcesContainers.isNotEmpty()) {
             when(withdraw(nonEmptyEnergyResourcesContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)){
-                ERR_NOT_IN_RANGE ->moveTo(nonEmptyEnergyResourcesContainers.first().pos)
+                ERR_NOT_IN_RANGE -> moveTo(nonEmptyEnergyResourcesContainers.first().pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
             }
         } else {
             moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
@@ -424,7 +430,11 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 
         if (energyContainers.isNotEmpty()) {
             if (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(energyContainers.first().pos)
+                moveTo(energyContainers.first().pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
             }
 
             return
@@ -433,11 +443,15 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         moveTo(Game.flags["park"]!!)
     } else {
         //search and load
-        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 10) }
+        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 7) }
 
         if (droppedEnergySourcesInRange.isNotEmpty()) {
             if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
-                moveTo(droppedEnergySourcesInRange.first().pos)
+                moveTo(droppedEnergySourcesInRange.first().pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
             }
 
             return
@@ -452,7 +466,11 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 
         if (nonEmptyEnergyContainerStructures.isNotEmpty()) {
             if (withdraw(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>().pos)
+                moveTo(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>().pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
             }
 
             return
