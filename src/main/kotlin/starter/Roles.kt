@@ -395,7 +395,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
             return
         }
 
-        val nonEmptyEnergyResourcesContainers = currentToRoomState.energyContainers
+        val nonEmptyEnergyResourcesContainers = currentFromRoomState.energyContainers
                 .filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
                 .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
