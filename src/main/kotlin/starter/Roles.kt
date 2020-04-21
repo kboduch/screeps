@@ -277,10 +277,12 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     } else {
         //store
         var energyContainers = currentToRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
-        val spawnsAndExtensions = currentToRoomState.myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
 
-        if (spawnsAndExtensions.isNotEmpty()) {
-            energyContainers = spawnsAndExtensions
+        if (this.memory.harvestAndDeliver) {
+            val spawnsAndExtensions = currentToRoomState.myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
+            if (spawnsAndExtensions.isNotEmpty()) {
+                energyContainers = spawnsAndExtensions
+            }
         }
 
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }

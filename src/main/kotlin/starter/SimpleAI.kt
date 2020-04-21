@@ -220,9 +220,7 @@ private fun spawnBigHarvesters(
     }
 
     val body = arrayOf<BodyPartConstant>(
-            WORK, WORK, WORK, WORK,
-            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
+            MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK, CARRY
     )
 
     val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
@@ -232,7 +230,10 @@ private fun spawnBigHarvesters(
 
     val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
     val code = spawn.spawnCreep(body, newName, options {
-        memory = jsObject<CreepMemory> { this.role = role }
+        memory = jsObject<CreepMemory> {
+            this.role = role
+            this.harvestAndDeliver = creeps.count{ it.memory.role == Role.TRUCKER } == 0
+        }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 

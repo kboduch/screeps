@@ -10,6 +10,7 @@ import screeps.utils.memory.memory
 /* Creep.memory */
 var CreepMemory.renewing: Boolean by memory { false }
 var CreepMemory.building: Boolean by memory { false }
+var CreepMemory.harvestAndDeliver: Boolean by memory { true }
 var CreepMemory.pause: Int by memory { 0 }
 var CreepMemory.role by memory(Role.UNASSIGNED)
 var CreepMemory.targetId: String? by memory( )
