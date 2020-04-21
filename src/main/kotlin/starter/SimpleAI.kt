@@ -49,8 +49,8 @@ fun gameLoop() {
         spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
         CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
         spawnTrucker(Game.creeps.values, mainSpawn) -> {}
-        spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
-        spawnCreeps(arrayOf(WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
+        spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), Game.creeps.values, mainSpawn) -> {} //600
+        spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), Game.creeps.values, mainSpawn) -> {}
         spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
     }
 
