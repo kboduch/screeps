@@ -215,7 +215,7 @@ private fun spawnBigHarvesters(
         spawn: StructureSpawn
 ): Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
+        creeps.count { it.memory.role == Role.HARVESTER } < 3 -> Role.HARVESTER
         else -> return false
     }
 
@@ -261,7 +261,12 @@ private fun spawnCreeps(
     damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL)) })
     damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(1) && it.isStructureTypeOf(STRUCTURE_WALL) })
 
-    var minimumUpgraders = spawn.room.controller?.level ?: 0
+    var minimumUpgraders = when (spawn.room.controller?.level) {
+        0, 1, 2 -> 2
+        3, 4 -> 3
+        5, 6, 7, 8 -> 4
+        else -> 0
+    }
 
     if (
             spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
@@ -272,14 +277,14 @@ private fun spawnCreeps(
 
     val role: Role = when {
 
-        creeps.count { it.memory.role == Role.HARVESTER } < 4 -> Role.HARVESTER
+        creeps.count { it.memory.role == Role.HARVESTER } < 3 -> Role.HARVESTER
         creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
         spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
                 creeps.count { it.memory.role == Role.BUILDER } < 3 -> Role.BUILDER
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
-        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 3 -> Role.REPAIRER
+        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 2 -> Role.REPAIRER
 
         else -> return false
     }
