@@ -310,8 +310,15 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
         say("🚧 repair")
     }
 
+    val currentFromRoomState = CurrentGameState.roomStates[fromRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${fromRoom.name}")
+
+    val currentToRoomState = CurrentGameState.roomStates[toRoom.name]
+            ?: throw RuntimeException("Missing current room status for ${toRoom.name}")
+
 
     if (memory.building) {
+        //repair
         if (null != this.memory.targetId) {
             val target = Game.getObjectById<Structure>(this.memory.targetId)
             if (null != target && target.hits < target.hitsMax) {
@@ -332,11 +339,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
             }
         }
 
-        val damagedStructures = toRoom.find(
-                FIND_STRUCTURES,
-                options { filter = { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) && it.hits < it.hitsMax} }
-        )
-
+        val damagedStructures = currentToRoomState.damagedStructures
         var targets = listOf<Structure>()
 
         val otherDamagedStructures = damagedStructures.filter { !it.isStructureTypeOf(STRUCTURE_WALL) }
@@ -375,18 +378,35 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
             this.memory.targetId = targets.first().id
             this.repair()
         } else {
-            moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
+            moveTo(Game.flags["park"]!!)
         }
     } else {
-        val targets = fromRoom.find(FIND_STRUCTURES)
-                .filter { it.isEnergyContainer() }
-                .filter { 0 < it.unsafeCast<StoreOwner>().store[RESOURCE_ENERGY]!! }
+        //replenish energy
+        val droppedSourcesInRange = currentToRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(this.pos, 4) }
 
-        if (targets.isNotEmpty()) {
-            moveTo(targets[0].pos)
-            withdraw(targets[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
+        if (droppedSourcesInRange.isNotEmpty()) {
+            when (pickup(droppedSourcesInRange.first())) {
+                ERR_NOT_IN_RANGE -> moveTo(droppedSourcesInRange.first().pos)
+                OK -> memory.building = true
+            }
+
+            return
+        }
+
+        val nonEmptyEnergyResourcesContainers = currentToRoomState.energyContainers
+                .filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
+
+        if (nonEmptyEnergyResourcesContainers.isNotEmpty()) {
+            when(withdraw(nonEmptyEnergyResourcesContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)){
+                ERR_NOT_IN_RANGE -> moveTo(nonEmptyEnergyResourcesContainers.first().pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
+            }
         } else {
-            moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
+            moveTo(Game.flags["park"]!!)
         }
     }
 }
