@@ -482,6 +482,8 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         // include storage when room's construction energy levels are lower then max
         val nonEmptyEnergyContainerStructures = if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
             currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                    .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
+
         } else {
             currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
         }
