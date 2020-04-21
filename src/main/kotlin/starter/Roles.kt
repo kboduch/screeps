@@ -465,7 +465,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         moveTo(Game.flags["park"]!!)
     } else {
         //search and load
-        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 7) }
+        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 5) }
 
         if (droppedEnergySourcesInRange.isNotEmpty()) {
             if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
