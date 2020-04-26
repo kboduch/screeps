@@ -207,6 +207,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
     } else {
 
         val containers = currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         if (containers.isNotEmpty()) {
             moveTo(containers[0].pos)
@@ -247,7 +248,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
     val currentToRoomState = CurrentGameState.roomStates[toRoom.name]
             ?: throw RuntimeException("Missing current room status for ${toRoom.name}")
 
-    if (this.needsRenewing(currentToRoomState, 50)) {
+    if (this.needsRenewing(currentToRoomState, 200)) {
         return
     }
 
@@ -263,10 +264,10 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
         }
 
         //todo extract `find and harvest` logic
-        var activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.isNearTo(this) }
+        var activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.isNearTo(this) }.sortedBy { it.energy }
 
         if (activeSourcesInRange.isEmpty()) {
-            activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.getSteppableAdjacent(true).isNotEmpty() }
+            activeSourcesInRange = currentFromRoomState.activeEnergySources.filter { it.pos.getSteppableAdjacent(true).isNotEmpty() }.sortedBy { it.energy }
         }
 
         if (activeSourcesInRange.isNotEmpty()) {
@@ -345,6 +346,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
         var targets = listOf<Structure>()
 
         val otherDamagedStructures = damagedStructures.filter { !it.isStructureTypeOf(STRUCTURE_WALL) }
+                .filterNot { it.isStructureTypeOf(STRUCTURE_RAMPART) && !it.isHpBelow(10000000) }//temp
 
         if (otherDamagedStructures.isNotEmpty()) {
             targets = otherDamagedStructures
@@ -429,7 +431,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
     val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
             ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
 
-    if (this.needsRenewing(currentRoomState, 100)) {
+    if (this.needsRenewing(currentRoomState, 150)) {
         return
     }
 

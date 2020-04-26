@@ -129,7 +129,7 @@ private fun towerAction(tower: StructureTower) {
     }
 
     if (tower.store.getUsedCapacity(RESOURCE_ENERGY) > TOWER_CAPACITY - 250) {
-        val damagedStructures = currentRoomState.damagedStructures.filter { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_ROAD, STRUCTURE_CONTAINER, STRUCTURE_RAMPART)) && it.isHpBelowPercent(100) }
+        val damagedStructures = currentRoomState.damagedStructures.filter { it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_ROAD, STRUCTURE_CONTAINER)) && it.isHpBelowPercent(100) }
         if (damagedStructures.isNotEmpty()) {
             tower.repair(damagedStructures[0])
 
@@ -176,7 +176,7 @@ private fun spawnAssaulter(
         spawn: StructureSpawn
 ):Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.ASSAULTER } < 2 -> Role.ASSAULTER
+        creeps.filter { it.memory.role == Role.ASSAULTER }.sumBy { it.ticksToLive } < 100 -> Role.ASSAULTER
         else -> return false
     }
     val body = arrayOf<BodyPartConstant>(
@@ -257,8 +257,9 @@ private fun spawnCreeps(
             ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
 
     val damagedStructures = mutableListOf<Structure>()
-    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL)) })
-    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(1) && it.isStructureTypeOf(STRUCTURE_WALL) })
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL, STRUCTURE_RAMPART)) })
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelow(2500000) && it.isStructureTypeOf(STRUCTURE_WALL) }) //tmp
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelow(10000000) && it.isStructureTypeOf(STRUCTURE_RAMPART) }) //tmp
 
     var minimumUpgraders = when (spawn.room.controller?.level) {
         0, 1, 2 -> 2
@@ -280,10 +281,10 @@ private fun spawnCreeps(
         creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
         spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
-                creeps.count { it.memory.role == Role.BUILDER } < 3 -> Role.BUILDER
+                creeps.count { it.memory.role == Role.BUILDER } < 1 -> Role.BUILDER
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
 
-        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 2 -> Role.REPAIRER
+        damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 1 -> Role.REPAIRER
 
         else -> return false
     }
