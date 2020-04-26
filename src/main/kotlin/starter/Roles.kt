@@ -44,6 +44,16 @@ fun Creep.assault(targetRoomName: String) {
     if (null != target) {
 
         if (target.isStructureTypeOf(STRUCTURE_CONTROLLER)) {
+
+            when (claimController(target as StructureController)) {
+                OK -> return
+                ERR_INVALID_TARGET -> {} //The target is not a valid neutral controller object.
+                ERR_FULL -> {} //todo
+                ERR_NOT_IN_RANGE -> moveTo(target.pos, options { visualizePathStyle = options { lineStyle = LINE_STYLE_SOLID } })
+                ERR_NO_BODYPART -> { console.log("No claim body part"); return }
+                ERR_GCL_NOT_ENOUGH -> { console.log("GCL is low"); return }
+            }
+
             when (attackController(target as StructureController)) {
                 ERR_NOT_IN_RANGE -> moveTo(target.pos, options { visualizePathStyle = options { lineStyle = LINE_STYLE_SOLID } })
                 ERR_INVALID_TARGET -> this.memory.targetId = null
@@ -102,10 +112,15 @@ fun Creep.assault(targetRoomName: String) {
     }
 }
 
-fun Creep.upgrade(assignedRoom: Room = this.room, controller: StructureController) {
+fun Creep.upgrade(assignedRoom: Room = this.room, controller: StructureController? = this.room.controller) {
 
-    if (null == store.getCapacity(RESOURCE_ENERGY))
+    if (null == store.getCapacity(RESOURCE_ENERGY)) {
         return
+    }
+
+    if (null == controller) {
+        return
+    }
 
     if (memory.building && store[RESOURCE_ENERGY] == 0) {
         memory.building = false

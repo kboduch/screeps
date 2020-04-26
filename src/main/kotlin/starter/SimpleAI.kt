@@ -21,12 +21,20 @@ fun gameLoop() {
 
     Game.rooms.values.forEach { room: Room ->
         if (room.controller != null && room.controller!!.my) {
-            CurrentGameState.roomStates[room.name] = CurrentRoomState(room)
+            CurrentGameState.roomStates[room.name] = CurrentRoomState(room) //todo change to myRoomStates
         }
+        //todo add otherRoomStates (neutral and hostile)
     }
 
     Game.flags.values.forEach { flag ->
-        if (flag.name == "Assault" && flag.memory.roomName != null ) {
+
+        if (flag.memory.roomName != null && CurrentGameState.roomStates.containsKey(flag.memory.roomName as String)) {
+            flag.memory.roomName = null
+            flag.remove()
+            CurrentGameState.assaultTargetRoomName = null
+        }
+
+        if (flag.name == "Assault" && flag.memory.roomName != null) {
             CurrentGameState.assaultTargetRoomName = flag.memory.roomName
         }
     }
@@ -38,21 +46,33 @@ fun gameLoop() {
                 0.0,
                 options { align = screeps.api.TEXT_ALIGN_LEFT }
         )
-    }
 
-    val mainSpawn: StructureSpawn = Game.spawns.values.firstOrNull() ?: return
+        val mainSpawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+
+        if (null != mainSpawn) {
+            val creepz = Game.creeps.values.filter { it.room.name == roomName }.toTypedArray()
+            when (true) {
+                spawnBigHarvesters(creepz, mainSpawn as StructureSpawn) -> {}
+                CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(creepz, mainSpawn) -> {}
+                spawnTrucker(creepz, mainSpawn) -> {}
+                spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), creepz, mainSpawn) -> {} //600
+                spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), creepz, mainSpawn) -> {}
+                spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), creepz, mainSpawn) -> {}
+            }
+        } else {
+            val flagList = Game.flags.values.filter { it.name == "spawn" }
+
+            if (flagList.isNotEmpty()) {
+                val spawnPlacement = flagList.first()
+                when (currentRoomState.room.createConstructionSite(spawnPlacement.pos.x, spawnPlacement.pos.y, STRUCTURE_SPAWN)){
+
+                }
+            }
+        }
+    }
 
     //delete memories of creeps that have passed away
     houseKeeping(Game.creeps)
-
-    when (true) {
-        spawnBigHarvesters(Game.creeps.values, mainSpawn) -> {}
-        CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
-        spawnTrucker(Game.creeps.values, mainSpawn) -> {}
-        spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), Game.creeps.values, mainSpawn) -> {} //600
-        spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), Game.creeps.values, mainSpawn) -> {}
-        spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), Game.creeps.values, mainSpawn) -> {}
-    }
 
     //todo write a spawning logic
     // o is extension, x is road, S is spawn
@@ -86,7 +106,7 @@ fun gameLoop() {
             Role.TRUCKER -> creep.truck()
             Role.HARVESTER -> creep.harvest()
             Role.BUILDER -> creep.build()
-            Role.UPGRADER -> creep.upgrade(controller = mainSpawn.room.controller!!)
+            Role.UPGRADER -> creep.upgrade()
             else -> creep.pause()
         }
     }
@@ -96,12 +116,6 @@ fun gameLoop() {
             STRUCTURE_TOWER -> towerAction(structure as StructureTower)
         }
     }
-    test(mainSpawn)
-}
-
-@Suppress("UNUSED_PARAMETER")
-private fun test(spawn: StructureSpawn) {
-
 }
 
 private fun towerAction(tower: StructureTower) {
@@ -277,12 +291,10 @@ private fun spawnCreeps(
 
     val role: Role = when {
 
+        spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() && creeps.count { it.memory.role == Role.BUILDER } < 1 -> Role.BUILDER
         creeps.count { it.memory.role == Role.HARVESTER } < 3 -> Role.HARVESTER
-        creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
-
-        spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() &&
-                creeps.count { it.memory.role == Role.BUILDER } < 1 -> Role.BUILDER
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
+        creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
         damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 1 -> Role.REPAIRER
 
