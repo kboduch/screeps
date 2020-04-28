@@ -54,8 +54,8 @@ class CurrentRoomState(val room: Room) {
         roomName = room.name
         damagedStructures = structures.filter { !it.isStructureTypeOf(STRUCTURE_CONTROLLER) && it.hits < it.hitsMax }
         energyContainers = structures.filter { it.isEnergyContainer() }
-        energyContainersTotalLevel = energyContainers.sumBy { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) ?: 0 }
-        energyContainersTotalMaximumLevel = energyContainers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY) ?: 0 }
+        energyContainersTotalLevel = energyContainers.sumBy { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY)!! }
+        energyContainersTotalMaximumLevel = energyContainers.sumBy { it.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! }
         hostileCreeps = room.find(FIND_HOSTILE_CREEPS).toList()
 
         val spawnEnergyStructures = mutableMapOf<String, List<Structure>>()

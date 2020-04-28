@@ -28,12 +28,6 @@ fun gameLoop() {
 
     Game.flags.values.forEach { flag ->
 
-        if (flag.memory.roomName != null && CurrentGameState.roomStates.containsKey(flag.memory.roomName as String)) {
-            flag.memory.roomName = null
-            flag.remove()
-            CurrentGameState.assaultTargetRoomName = null
-        }
-
         if (flag.name == "Assault" && flag.memory.roomName != null) {
             CurrentGameState.assaultTargetRoomName = flag.memory.roomName
         }
@@ -53,7 +47,7 @@ fun gameLoop() {
             val creepz = Game.creeps.values.filter { it.room.name == roomName }.toTypedArray()
             when (true) {
                 spawnBigHarvesters(creepz, mainSpawn as StructureSpawn) -> {}
-                CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(creepz, mainSpawn) -> {}
+                CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
                 spawnTrucker(creepz, mainSpawn) -> {}
                 spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), creepz, mainSpawn) -> {} //600
                 spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), creepz, mainSpawn) -> {}
@@ -69,6 +63,19 @@ fun gameLoop() {
                 }
             }
         }
+    }
+
+    //todo remove
+    val mainSpawn = Game.spawns.values.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+    val constructionSitez = arrayListOf<ConstructionSite>()
+    CurrentGameState.roomStates.forEach {
+        if (it.value.spawnEnergyStructures.isEmpty()) {
+            constructionSitez.addAll(it.value.constructionSites)
+        }
+    }
+
+    if (constructionSitez.isNotEmpty() && mainSpawn != null && null == mainSpawn.spawning) {
+        spawnRBuilders(Game.creeps.values, mainSpawn)
     }
 
     //delete memories of creeps that have passed away
@@ -196,7 +203,7 @@ private fun spawnAssaulter(
     val body = arrayOf<BodyPartConstant>(
             TOUGH, TOUGH, TOUGH, TOUGH,
             ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
-            CLAIM,
+//            CLAIM,
             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
@@ -257,6 +264,39 @@ private fun spawnBigHarvesters(
     }
 }
 
+private fun spawnRBuilders(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+): Boolean {
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.RBUILDER } < 3 -> Role.RBUILDER
+        else -> return false
+    }
+
+    val body = arrayOf<BodyPartConstant>(
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK, CARRY
+    )
+
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
+        return false
+    }
+
+    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> {
+            this.role = role
+        }
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
+    })
+
+    return when (code) {
+        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> { console.log("unhandled error code $code"); false }
+    }
+}
+
 private fun spawnCreeps(
         body: Array<BodyPartConstant>,
         creeps: Array<Creep>,
@@ -271,9 +311,8 @@ private fun spawnCreeps(
             ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
 
     val damagedStructures = mutableListOf<Structure>()
-    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL, STRUCTURE_RAMPART)) })
+    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelowPercent(80) && !it.isStructureTypeOf(arrayOf<StructureConstant>(STRUCTURE_CONTROLLER, STRUCTURE_WALL)) })
     damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelow(2500000) && it.isStructureTypeOf(STRUCTURE_WALL) }) //tmp
-    damagedStructures.addAll(currentRoomState.damagedStructures.filter { it.isHpBelow(10000000) && it.isStructureTypeOf(STRUCTURE_RAMPART) }) //tmp
 
     var minimumUpgraders = when (spawn.room.controller?.level) {
         0, 1, 2 -> 2
@@ -282,19 +321,19 @@ private fun spawnCreeps(
         else -> 0
     }
 
+    val storageStructures = currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_STORAGE) }
     if (
             spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
-            currentRoomState.energyContainers.isNotEmpty() && currentRoomState.energyContainersTotalLevel == currentRoomState.energyContainersTotalMaximumLevel
+            storageStructures.isNotEmpty() && storageStructures.sumBy { it.unsafeCast<StoreOwner>().store.getFreeCapacity() } == 0
     ) {
-        minimumUpgraders += 2
+        minimumUpgraders += creeps.count { it.memory.role == Role.UPGRADER } + 1
     }
 
     val role: Role = when {
 
-        spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() && creeps.count { it.memory.role == Role.BUILDER } < 1 -> Role.BUILDER
+        spawn.room.find(FIND_MY_CONSTRUCTION_SITES).isNotEmpty() && creeps.count { it.memory.role == Role.BUILDER } < 2 -> Role.BUILDER
         creeps.count { it.memory.role == Role.HARVESTER } < 3 -> Role.HARVESTER
         creeps.count { it.memory.role == Role.UPGRADER } < minimumUpgraders -> Role.UPGRADER
-        creeps.count { it.memory.role == Role.TRUCKER } < 1 -> Role.TRUCKER
 
         damagedStructures.isNotEmpty() && creeps.count { it.memory.role == Role.REPAIRER } < 1 -> Role.REPAIRER
 

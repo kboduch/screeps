@@ -13,7 +13,8 @@ enum class Role {
     UPGRADER,
     REPAIRER,
     TRUCKER,
-    ASSAULTER
+    ASSAULTER,
+    RBUILDER
 }
 
 fun Creep.assault(targetRoomName: String) {
@@ -76,7 +77,14 @@ fun Creep.assault(targetRoomName: String) {
         val hostileController = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_CONTROLLER) && (it.unsafeCast<StructureController>().upgradeBlocked < 100 || it.unsafeCast<StructureController>().upgradeBlocked == null) }
         val hostileTowers = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) }
         val hostileSpawn = hostileStructures.filter { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+        val neutralStructures = this.room.find(FIND_STRUCTURES)
 
+        if (neutralStructures.isNotEmpty()) {
+            val nControllers = neutralStructures.filter { it.isStructureTypeOf(STRUCTURE_CONTROLLER) && !it.my }
+            if (nControllers.isNotEmpty()) {
+                this.memory.targetId = nControllers.first().id
+            }
+        }
 
         if (hostileController.isNotEmpty()) {
             this.memory.targetId = hostileController.minBy { it.pos.getRangeTo(this) }!!.id
@@ -169,8 +177,26 @@ fun Creep.upgrade(assignedRoom: Room = this.room, controller: StructureControlle
                     }
                 })
             }
-        } else {
-            moveTo(Game.flags["park"]?.pos?.x!!, Game.flags["park"]?.pos?.y!!)
+
+            return
+        }
+
+        var activeSourcesInRange = this.pos.findInRange(FIND_SOURCES_ACTIVE, 1)
+
+        if (activeSourcesInRange.isEmpty()) {
+            activeSourcesInRange = assignedRoom.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
+        }
+
+        if (activeSourcesInRange.isNotEmpty()) {
+            when (harvest(activeSourcesInRange[0])) {
+                ERR_NOT_IN_RANGE -> moveTo(activeSourcesInRange[0].pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
+            }
+
+            return
         }
     }
 }
@@ -214,7 +240,12 @@ fun Creep.build(assignedRoom: Room = this.room) {
     if (memory.building) {
         if (constructionSites.isNotEmpty()) {
             if(build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
-                moveTo(constructionSites[0].pos)
+                moveTo(constructionSites[0].pos, options {
+                    reusePath = 1
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
             }
 
             return
@@ -238,9 +269,15 @@ fun Creep.build(assignedRoom: Room = this.room) {
             activeSourcesInRange = assignedRoom.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
         }
 
-        if (activeSourcesInRange.isNotEmpty())
-            moveTo(activeSourcesInRange[0].pos)
-            harvest(activeSourcesInRange[0])
+        if (activeSourcesInRange.isNotEmpty()) {
+            when (harvest(activeSourcesInRange[0])) {
+                ERR_NOT_IN_RANGE -> moveTo(activeSourcesInRange[0].pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
+            }
+        }
     }
 }
 
@@ -361,7 +398,6 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
         var targets = listOf<Structure>()
 
         val otherDamagedStructures = damagedStructures.filter { !it.isStructureTypeOf(STRUCTURE_WALL) }
-                .filterNot { it.isStructureTypeOf(STRUCTURE_RAMPART) && !it.isHpBelow(10000000) }//temp
 
         if (otherDamagedStructures.isNotEmpty()) {
             targets = otherDamagedStructures
@@ -430,6 +466,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
     }
 }
 
+//todo add targetID to memory and search containers by > energy + distance
 fun Creep.truck(assignedRoom: Room = this.room) {
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
@@ -470,6 +507,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         if (energyContainers.isNotEmpty()) {
             if (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 moveTo(energyContainers.first().pos, options {
+                    reusePath = 2
                     visualizePathStyle = options {
                         lineStyle = LINE_STYLE_DOTTED
                     }
@@ -487,6 +525,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         if (droppedEnergySourcesInRange.isNotEmpty()) {
             if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
                 moveTo(droppedEnergySourcesInRange.first().pos, options {
+                    reusePath = 2
                     visualizePathStyle = options {
                         lineStyle = LINE_STYLE_DOTTED
                     }
@@ -526,6 +565,12 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 }
 
 private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicksToLive: Int = 50): Boolean {
+    if (currentRoomState.room.energyAvailable < SPAWN_ENERGY_CAPACITY) {
+        this.memory.renewing = false
+
+        return false
+    }
+
     if (this.memory.renewing || this.ticksToLive < minimumTicksToLive) {
         this.memory.renewing = true
 
