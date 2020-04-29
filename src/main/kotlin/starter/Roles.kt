@@ -345,7 +345,7 @@ fun Creep.harvest(fromRoom: Room = this.room, toRoom: Room = this.room) {
                 ERR_NOT_IN_RANGE -> moveTo(energyContainers.first().pos)
             }
         } else {
-            moveTo(Game.flags["park"]!!)
+            park(currentToRoomState)
         }
     }
 }
@@ -433,7 +433,7 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
             this.memory.targetId = targets.first().id
             this.repair()
         } else {
-            moveTo(Game.flags["park"]!!)
+            park(currentToRoomState)
         }
     } else {
         //replenish energy
@@ -461,7 +461,22 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
                 })
             }
         } else {
-            moveTo(Game.flags["park"]!!)
+            park(currentFromRoomState)
+        }
+    }
+}
+
+fun Creep.park(currentRoomState: CurrentRoomState) {
+    val parkX = currentRoomState.room.memory.parkX
+    val parkY = currentRoomState.room.memory.parkY
+
+    if (this.pos.x != parkX || this.pos.y != parkY) {
+        when(moveTo(RoomPosition(parkX, parkY, currentRoomState.roomName), options { visualizePathStyle = options { lineStyle = LINE_STYLE_DOTTED } })) {
+            ERR_NO_PATH -> console.log("$name no path available to ($parkX, $parkY)")
+            ERR_NOT_FOUND -> console.log("$name no memorized path to use to ($parkX, $parkY)")
+            ERR_INVALID_TARGET -> console.log("$name invalid target ($parkX, $parkY) [${JSON.stringify(currentRoomState.room.lookAt(parkX, parkY).first())}]")
+            OK, ERR_NOT_OWNER, ERR_BUSY, ERR_TIRED, ERR_NO_BODYPART -> {}
+            else -> {}
         }
     }
 }
@@ -517,7 +532,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
             return
         }
 
-        moveTo(Game.flags["park"]!!)
+        park(currentRoomState)
     } else {
         //search and load
         val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 5) }
@@ -538,10 +553,11 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         // include storage when room's construction energy levels are lower then max
         val nonEmptyEnergyContainerStructures = if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
             currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                    .sortedBy { it.pos.getRangeTo(pos) }
                     .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         } else {
-            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }.sortedBy { it.pos.getRangeTo(pos) }
         }
 
         if (nonEmptyEnergyContainerStructures.isNotEmpty()) {
@@ -559,7 +575,7 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         if (this.store.getUsedCapacity() > 0) {
             this.memory.building = !this.memory.building
         } else {
-            moveTo(Game.flags["park"]!!)
+            park(currentRoomState)
         }
     }
 }

@@ -92,3 +92,7 @@ class WeightedStructureTypeComparator(private val weightMap: Map<StructureConsta
         else -> 0
     }
 }
+
+fun creepNameGenerator(role: Role, bodyPartsCost: Int): String {
+    return "${role.name.substring(0, 4)}_${bodyPartsCost}_${Game.time.toString().takeLast(4)}"
+}

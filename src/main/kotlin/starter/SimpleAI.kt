@@ -34,6 +34,17 @@ fun gameLoop() {
     }
 
     CurrentGameState.roomStates.forEach {(roomName, currentRoomState) ->
+        val roomCreeps = Game.creeps.values.filter { it.room.name == roomName }.toTypedArray()
+
+        if (Game.time % 20 == 0) {
+            val areThereAnyTruckersPresentInRoom = roomCreeps.count { it.memory.role == Role.TRUCKER } > 0
+            roomCreeps.forEach {
+                if (it.memory.role == Role.HARVESTER) {
+                    it.memory.harvestAndDeliver = areThereAnyTruckersPresentInRoom.not()
+                }
+            }
+        }
+
         currentRoomState.room.visual.text(
                 "$roomName ${currentRoomState.room.energyAvailable}/${currentRoomState.room.energyCapacityAvailable} ${currentRoomState.energyContainersTotalLevel}/${currentRoomState.energyContainersTotalMaximumLevel}",
                 0.0,
@@ -44,14 +55,13 @@ fun gameLoop() {
         val mainSpawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
 
         if (null != mainSpawn) {
-            val creepz = Game.creeps.values.filter { it.room.name == roomName }.toTypedArray()
             when (true) {
-                spawnBigHarvesters(creepz, mainSpawn as StructureSpawn) -> {}
+                spawnBigHarvesters(roomCreeps, mainSpawn as StructureSpawn) -> {}
                 CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
-                spawnTrucker(creepz, mainSpawn) -> {}
-                spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), creepz, mainSpawn) -> {} //600
-                spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), creepz, mainSpawn) -> {}
-                spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), creepz, mainSpawn) -> {}
+                spawnTrucker(roomCreeps, mainSpawn) -> {}
+                spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), roomCreeps, mainSpawn) -> {} //600
+                spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), roomCreeps, mainSpawn) -> {}
+                spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), roomCreeps, mainSpawn) -> {}
             }
         } else {
             val flagList = Game.flags.values.filter { it.name == "spawn" }
@@ -176,7 +186,7 @@ private fun spawnTrucker(
         return false
     }
 
-    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val newName = creepNameGenerator(role, bodyPartsCost)
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
@@ -212,7 +222,7 @@ private fun spawnAssaulter(
         return false
     }
 
-    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val newName = creepNameGenerator(role, bodyPartsCost)
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
@@ -248,7 +258,7 @@ private fun spawnBigHarvesters(
         return false
     }
 
-    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val newName = creepNameGenerator(role, bodyPartsCost)
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> {
             this.role = role
@@ -282,7 +292,7 @@ private fun spawnRBuilders(
         return false
     }
 
-    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val newName = creepNameGenerator(role, bodyPartsCost)
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> {
             this.role = role
@@ -340,7 +350,7 @@ private fun spawnCreeps(
         else -> return false
     }
 
-    val newName = "${role.name}_${bodyPartsCost}_${Game.time}"
+    val newName = creepNameGenerator(role, bodyPartsCost)
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> { this.role = role }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()

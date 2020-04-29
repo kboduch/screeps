@@ -32,6 +32,8 @@ var FlagMemory.roomName : String? by memory ()
 
 /* room.memory */
 var RoomMemory.numberOfCreeps : Int by memory { 0 }
+var RoomMemory.parkX : Int by memory { 0 }
+var RoomMemory.parkY : Int by memory { 0 }
 
 /* spawn.memory */
 var SpawnMemory.test : Int by memory { 0 }
