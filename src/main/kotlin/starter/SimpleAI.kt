@@ -62,7 +62,7 @@ fun gameLoop() {
                 spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), roomCreeps, mainSpawn) -> {} //600
                 spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), roomCreeps, mainSpawn) -> {}
                 spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), roomCreeps, mainSpawn) -> {}
-                spawnEnergyVentCreeps(mainSpawn as StructureSpawn) -> {}
+                spawnEnergyVentCreeps(roomCreeps, mainSpawn as StructureSpawn) -> {}
             }
         } else {
             val flagList = Game.flags.values.filter { it.name == "spawn" }
@@ -308,7 +308,15 @@ private fun spawnRBuilders(
     }
 }
 
-private fun spawnEnergyVentCreeps(spawn: StructureSpawn): Boolean {
+private fun spawnEnergyVentCreeps(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+): Boolean {
+
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.UPGRADER } < 10 -> Role.UPGRADER
+        else -> return false
+    }
 
     val currentRoomState = CurrentGameState.roomStates[spawn.room.name]
             ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
@@ -338,8 +346,6 @@ private fun spawnEnergyVentCreeps(spawn: StructureSpawn): Boolean {
             if (spawn.room.energyAvailable < bodyPartsCost) {
                 return false
             }
-
-            val role = Role.UPGRADER
 
             val newName = creepNameGenerator(role, bodyPartsCost)
             val code = spawn.spawnCreep(body, newName, options {
