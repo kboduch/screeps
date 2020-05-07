@@ -62,6 +62,7 @@ fun gameLoop() {
                 spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), roomCreeps, mainSpawn) -> {} //600
                 spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), roomCreeps, mainSpawn) -> {}
                 spawnCreeps(arrayOf(WORK, CARRY, MOVE, MOVE), roomCreeps, mainSpawn) -> {}
+                spawnEnergyVentCreeps(mainSpawn as StructureSpawn) -> {}
             }
         } else {
             val flagList = Game.flags.values.filter { it.name == "spawn" }
@@ -307,6 +308,62 @@ private fun spawnRBuilders(
     }
 }
 
+private fun spawnEnergyVentCreeps(spawn: StructureSpawn): Boolean {
+
+    val currentRoomState = CurrentGameState.roomStates[spawn.room.name]
+            ?: throw RuntimeException("Missing current room status for ${spawn.room.name}")
+
+    val storageStructures = currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_STORAGE) }
+    if (spawn.room.energyAvailable == spawn.room.energyCapacityAvailable && storageStructures.isNotEmpty()) {
+        val currentEnergy = storageStructures.sumBy {
+            it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) ?: 0
+        }
+
+        val totalResourceCapacity = storageStructures.sumBy {
+            it.unsafeCast<StoreOwner>().store.getCapacity() ?: 0
+        }
+
+        if (totalResourceCapacity == 0) {
+            return false
+        }
+
+        val storageUsedByEnergyPercentage = currentEnergy * 100 / totalResourceCapacity
+
+        if (storageUsedByEnergyPercentage > 74) {
+            val body = arrayOf<BodyPartConstant>(
+                    MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY
+            )
+
+            val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+            if (spawn.room.energyAvailable < bodyPartsCost) {
+                return false
+            }
+
+            val role = Role.UPGRADER
+
+            val newName = creepNameGenerator(role, bodyPartsCost)
+            val code = spawn.spawnCreep(body, newName, options {
+                memory = jsObject<CreepMemory> {
+                    this.role = role
+                }
+                energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
+            })
+
+            return when (code) {
+                OK -> {
+                    console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+                }
+                ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+                else -> {
+                    console.log("unhandled error code $code"); false
+                }
+            }
+        }
+    }
+
+    return false
+}
+
 private fun spawnCreeps(
         body: Array<BodyPartConstant>,
         creeps: Array<Creep>,
@@ -329,14 +386,6 @@ private fun spawnCreeps(
         3, 4 -> 3
         5, 6, 7, 8 -> 4
         else -> 0
-    }
-
-    val storageStructures = currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_STORAGE) }
-    if (
-            spawn.room.energyAvailable == spawn.room.energyCapacityAvailable &&
-            storageStructures.isNotEmpty() && storageStructures.sumBy { it.unsafeCast<StoreOwner>().store.getFreeCapacity() } == 0
-    ) {
-        minimumUpgraders += creeps.count { it.memory.role == Role.UPGRADER } + 1
     }
 
     val role: Role = when {
