@@ -113,6 +113,11 @@ fun gameLoop() {
 //    }
 
 
+    for ((_, structure) in Game.structures) {
+        when (structure.structureType) {
+            STRUCTURE_TOWER -> towerAction(structure as StructureTower)
+        }
+    }
 
     for ((_, creep) in Game.creeps) {
         if (creep.spawning) {
@@ -126,12 +131,6 @@ fun gameLoop() {
             Role.BUILDER -> creep.build()
             Role.UPGRADER -> creep.upgrade()
             else -> creep.pause()
-        }
-    }
-
-    for ((_, structure) in Game.structures) {
-        when (structure.structureType) {
-            STRUCTURE_TOWER -> towerAction(structure as StructureTower)
         }
     }
 }

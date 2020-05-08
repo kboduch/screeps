@@ -45,6 +45,8 @@ class CurrentRoomState(val room: Room) {
 
     val activeEnergySources: List<Source>
 
+    val tombstones: List<Tombstone>
+
     private val structures: Array<Structure>
     private val droppedResources: List<Resource>
 
@@ -65,6 +67,8 @@ class CurrentRoomState(val room: Room) {
         this.spawnEnergyStructures = spawnEnergyStructures.toMap()
 
         constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).toList()
+
+        tombstones = room.find(FIND_TOMBSTONES).toList()
 
         droppedResources = room.find(FIND_DROPPED_RESOURCES).toList()
         droppedEnergyResources = droppedResources.filter { it.resourceType == RESOURCE_ENERGY }
@@ -95,4 +99,8 @@ class WeightedStructureTypeComparator(private val weightMap: Map<StructureConsta
 
 fun creepNameGenerator(role: Role, bodyPartsCost: Int): String {
     return "${role.name.substring(0, 4)}_${bodyPartsCost}_${Game.time.toString().takeLast(4)}"
+}
+
+fun isIdTargetedByCreeps(id: String): Boolean {
+    return Game.creeps.values.count { it.memory.targetId == id } > 0
 }

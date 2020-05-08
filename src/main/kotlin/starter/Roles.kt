@@ -357,12 +357,12 @@ fun Creep.repair(fromRoom: Room = this.room, toRoom: Room = this.room) {
 
     if (memory.building && store[RESOURCE_ENERGY] == 0) {
         memory.building = false
-        say("🔄 harvest")
+        say("harvest")
     }
     if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
         memory.building = true
         this.memory.targetId = null //force acquiring new target
-        say("🚧 repair")
+        say("repair")
     }
 
     val currentFromRoomState = CurrentGameState.roomStates[fromRoom.name]
@@ -481,17 +481,18 @@ fun Creep.park(currentRoomState: CurrentRoomState) {
     }
 }
 
-//todo add targetID to memory and search containers by > energy + distance
 fun Creep.truck(assignedRoom: Room = this.room) {
     if (null == store.getCapacity(RESOURCE_ENERGY))
         return
 
-    if (memory.building && store[RESOURCE_ENERGY] == 0) {
+    if (memory.building && store.getUsedCapacity(RESOURCE_ENERGY) == 0) {
         memory.building = false
+        this.clearTargetId() //force acquiring new target
         say("🔄search and load")
     }
-    if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
+    if (!memory.building && store.getFreeCapacity(RESOURCE_ENERGY) == 0) {
         memory.building = true
+        this.clearTargetId() //force acquiring new target
         say("🚧storing")
     }
 
@@ -504,10 +505,38 @@ fun Creep.truck(assignedRoom: Room = this.room) {
 
     if (memory.building) {
         //storing
+        if (null != this.getTargetId()) {
+            val target = Game.getObjectById<StoreOwner>(this.getTargetId())
+
+            if (null != target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                when (transfer(target, RESOURCE_ENERGY)) {
+                    OK -> {
+                    }
+                    ERR_NOT_IN_RANGE -> {
+                        moveTo(target.pos, options {
+                            visualizePathStyle = screeps.api.options {
+                                lineStyle = screeps.api.LINE_STYLE_DOTTED
+                            }
+                        })
+                    }
+                    ERR_FULL -> {
+                       this.clearTargetId(); this.truck()
+                    }
+                    ERR_INVALID_TARGET -> {
+                        console.log("Invalid target (${target.id}). Clearing"); this.clearTargetId()
+                    }
+                }
+
+                return
+            } else {
+                this.clearTargetId()
+            }
+        }
+
         var energyContainers = currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_STORAGE) && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
         val myStructures = currentRoomState.myStructures
         val towers = myStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 200  }
-        val spawnsAndExtensions = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0  }
+        val spawnsAndExtensions = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 && !isIdTargetedByCreeps(it.id)  }
 
         if (spawnsAndExtensions.isNotEmpty()) {
             energyContainers = spawnsAndExtensions
@@ -520,33 +549,51 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
 
         if (energyContainers.isNotEmpty()) {
-            if (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(energyContainers.first().pos, options {
-                    reusePath = 2
-                    visualizePathStyle = options {
-                        lineStyle = LINE_STYLE_DOTTED
-                    }
-                })
-            }
-
+            this.setTargetId(energyContainers.first().id)
+            this.truck()
             return
         }
 
         park(currentRoomState)
     } else {
         //search and load
-        val droppedEnergySourcesInRange = currentRoomState.droppedEnergyResources.filter { it.pos.inRangeTo(pos, 5) }
+        if (null != this.getTargetId()) {
+            val target = Game.getObjectById<StoreOwner>(this.getTargetId())
 
-        if (droppedEnergySourcesInRange.isNotEmpty()) {
-            if (pickup(droppedEnergySourcesInRange.first()) == ERR_NOT_IN_RANGE) {
-                moveTo(droppedEnergySourcesInRange.first().pos, options {
-                    reusePath = 2
-                    visualizePathStyle = options {
-                        lineStyle = LINE_STYLE_DOTTED
+            if (null != target && target.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                when (withdraw(target, RESOURCE_ENERGY)) {
+                    OK -> {
                     }
-                })
+                    ERR_NOT_IN_RANGE -> {
+                        moveTo(target.pos, options {
+                            visualizePathStyle = screeps.api.options {
+                                lineStyle = screeps.api.LINE_STYLE_DOTTED
+                            }
+                        })
+                    }
+                    ERR_FULL -> {
+                        console.log("Belly full of ${this.store.keys}. Storing."); this.clearTargetId();
+                    }
+                    ERR_INVALID_TARGET -> {
+                        console.log("Invalid target (${target.id}). Clearing"); this.clearTargetId()
+                    }
+                }
+                return
+            } else {
+                this.clearTargetId()
             }
+        }
+        val creepCargoCapacity = this.store.getCapacity()!!
 
+        val tombstones = currentRoomState.tombstones.filter {
+            it.pos.inRangeTo(pos, 30) &&
+                    it.store.getUsedCapacity(RESOURCE_ENERGY) >= creepCargoCapacity &&
+                    !isIdTargetedByCreeps(it.id)
+        }
+
+        if (tombstones.isNotEmpty()) {
+            this.setTargetId(tombstones.first().id)
+            this.truck()
             return
         }
 
@@ -557,18 +604,12 @@ fun Creep.truck(assignedRoom: Room = this.room) {
                     .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         } else {
-            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }.sortedBy { it.pos.getRangeTo(pos) }
+            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > creepCargoCapacity  }.sortedBy { it.pos.getRangeTo(pos) }
         }
 
         if (nonEmptyEnergyContainerStructures.isNotEmpty()) {
-            if (withdraw(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                moveTo(nonEmptyEnergyContainerStructures.first().unsafeCast<StoreOwner>().pos, options {
-                    visualizePathStyle = options {
-                        lineStyle = LINE_STYLE_DOTTED
-                    }
-                })
-            }
-
+            this.setTargetId(nonEmptyEnergyContainerStructures.first().id)
+            this.truck()
             return
         }
 
