@@ -26,8 +26,8 @@ fun gameLoop() {
         //todo add otherRoomStates (neutral and hostile)
     }
 
+    CurrentGameState.assaultTargetRoomName = null
     Game.flags.values.forEach { flag ->
-
         if (flag.name == "Assault" && flag.memory.roomName != null) {
             CurrentGameState.assaultTargetRoomName = flag.memory.roomName
         }
@@ -130,6 +130,7 @@ fun gameLoop() {
             Role.HARVESTER -> creep.harvest()
             Role.BUILDER -> creep.build()
             Role.UPGRADER -> creep.upgrade()
+            Role.RBUILDER -> creep.build(constructionSitez.first().room ?: creep.room)
             else -> creep.pause()
         }
     }
@@ -213,7 +214,7 @@ private fun spawnAssaulter(
     val body = arrayOf<BodyPartConstant>(
             TOUGH, TOUGH, TOUGH, TOUGH,
             ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
-//            CLAIM,
+            CLAIM,
             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
@@ -296,6 +297,7 @@ private fun spawnRBuilders(
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> {
             this.role = role
+            this.fallbackRoom = spawn.room.name
         }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })

@@ -15,6 +15,9 @@ var CreepMemory.pause: Int by memory { 0 }
 var CreepMemory.role by memory(Role.UNASSIGNED)
 var CreepMemory.targetId: String? by memory( )
 
+//RBUILDER
+var CreepMemory.fallbackRoom: String? by memory( )
+
 
 /* Rest of the persistent memory structures.
 * These set an unused test variable to 0. This is done to illustrate the how to add variables to

@@ -256,8 +256,13 @@ fun Creep.build(assignedRoom: Room = this.room) {
                 .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         if (containers.isNotEmpty()) {
-            moveTo(containers[0].pos)
-            withdraw(containers[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)
+            when (withdraw(containers[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)) {
+                ERR_NOT_IN_RANGE -> { moveTo(containers[0].pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                }) }
+            }
 
             return
         }
@@ -277,7 +282,31 @@ fun Creep.build(assignedRoom: Room = this.room) {
                     }
                 })
             }
+
+            return
         }
+
+        if(this.memory.fallbackRoom != null)
+        {
+            val fallbackRoomState = CurrentGameState.roomStates[this.memory.fallbackRoom as String]
+                    ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
+
+            val containers = fallbackRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                    .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
+
+            if (containers.isNotEmpty()) {
+                when (withdraw(containers[0].unsafeCast<StoreOwner>(), RESOURCE_ENERGY)) {
+                    ERR_NOT_IN_RANGE -> { moveTo(containers[0].pos, options {
+                        visualizePathStyle = options {
+                            lineStyle = LINE_STYLE_DOTTED
+                        }
+                    }) }
+                }
+
+                return
+            }
+        }
+
     }
 }
 
