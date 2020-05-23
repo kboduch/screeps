@@ -17,7 +17,7 @@ enum class Role {
     RBUILDER
 }
 
-fun Creep.assault(targetRoomName: String) {
+fun Creep.assault(targetRoomName: String = this.room.name) {
     if (this.pos.roomName != targetRoomName) {
         //todo optimize
         val route = Game.map.findRoute(this.pos.roomName, targetRoomName);
@@ -229,8 +229,13 @@ fun Creep.build(assignedRoom: Room = this.room) {
     val currentRoomState = CurrentGameState.roomStates[assignedRoom.name]
             ?: throw RuntimeException("Missing current room status for ${assignedRoom.name}")
 
-    val constructionSites = currentRoomState.constructionSites
+    var constructionSites = currentRoomState.constructionSites
         .sortedBy { it.pos.getRangeTo(this.pos) }
+
+    val spawnsFirst = currentRoomState.constructionSites.filter { it.structureType == STRUCTURE_SPAWN }
+    if (spawnsFirst.isNotEmpty()) {
+        constructionSites = spawnsFirst
+    }
 
     if (constructionSites.isEmpty()) {
         //todo deposit energy

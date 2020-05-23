@@ -52,7 +52,7 @@ fun gameLoop() {
                 options { align = screeps.api.TEXT_ALIGN_LEFT }
         )
 
-        val mainSpawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+        val mainSpawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) && it.unsafeCast<StructureSpawn>().spawning == null }
 
         if (null != mainSpawn) {
             when (true) {
@@ -124,7 +124,13 @@ fun gameLoop() {
             continue
         }
         when (creep.memory.role) {
-            Role.ASSAULTER -> { CurrentGameState.assaultTargetRoomName?.isNotBlank().let { creep.assault(CurrentGameState.assaultTargetRoomName!!) }  }
+            Role.ASSAULTER -> {
+                if (CurrentGameState.assaultTargetRoomName != null) {
+                    creep.assault(CurrentGameState.assaultTargetRoomName!!)
+                } else {
+                    creep.assault()
+                }
+            }
             Role.REPAIRER -> creep.repair()
             Role.TRUCKER -> creep.truck()
             Role.HARVESTER -> creep.harvest()
@@ -280,7 +286,7 @@ private fun spawnRBuilders(
         spawn: StructureSpawn
 ): Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.RBUILDER } < 3 -> Role.RBUILDER
+        creeps.count { it.memory.role == Role.RBUILDER } < 6 -> Role.RBUILDER
         else -> return false
     }
 
