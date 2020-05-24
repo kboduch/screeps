@@ -57,7 +57,7 @@ fun gameLoop() {
         if (null != mainSpawn) {
             when (true) {
                 spawnBigHarvesters(roomCreeps, mainSpawn as StructureSpawn) -> {}
-                CurrentGameState.assaultTargetRoomName != null && spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
+                spawnAssaulter(Game.creeps.values, mainSpawn) -> {}
                 spawnTrucker(roomCreeps, mainSpawn) -> {}
                 spawnCreeps(arrayOf(MOVE, MOVE, MOVE, WORK, WORK, WORK, CARRY, CARRY, CARRY), roomCreeps, mainSpawn) -> {} //600
                 spawnCreeps(arrayOf(MOVE, MOVE, WORK, WORK, WORK, CARRY), roomCreeps, mainSpawn) -> {}
@@ -77,10 +77,10 @@ fun gameLoop() {
     }
 
     //todo remove
-    val mainSpawn = Game.spawns.values.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+    val mainSpawn = Game.spawns.values.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) && it.unsafeCast<StructureSpawn>().spawning == null }
     val constructionSitez = arrayListOf<ConstructionSite>()
     CurrentGameState.roomStates.forEach {
-        if (it.value.spawnEnergyStructures.isEmpty()) {
+        if (it.value.spawnEnergyStructures.isEmpty() || (it.value.room.controller != null && it.value.room.controller!!.level < 4)) {
             constructionSitez.addAll(it.value.constructionSites)
         }
     }
@@ -214,13 +214,14 @@ private fun spawnAssaulter(
         spawn: StructureSpawn
 ):Boolean {
     val role: Role = when {
-        creeps.filter { it.memory.role == Role.ASSAULTER }.sumBy { it.ticksToLive } < 100 -> Role.ASSAULTER
+        creeps.count { it.memory.role == Role.ASSAULTER } < 2 -> Role.ASSAULTER
+
         else -> return false
     }
     val body = arrayOf<BodyPartConstant>(
             TOUGH, TOUGH, TOUGH, TOUGH,
             ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
-            CLAIM,
+//            CLAIM,
             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
     )
 
@@ -286,7 +287,7 @@ private fun spawnRBuilders(
         spawn: StructureSpawn
 ): Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.RBUILDER } < 6 -> Role.RBUILDER
+        creeps.count { it.memory.role == Role.RBUILDER } < 3 -> Role.RBUILDER
         else -> return false
     }
 

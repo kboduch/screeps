@@ -232,7 +232,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
     var constructionSites = currentRoomState.constructionSites
         .sortedBy { it.pos.getRangeTo(this.pos) }
 
-    val spawnsFirst = currentRoomState.constructionSites.filter { it.structureType == STRUCTURE_SPAWN }
+    val spawnsFirst = currentRoomState.constructionSites.filter { it.structureType == STRUCTURE_SPAWN || it.structureType == STRUCTURE_EXTENSION }
     if (spawnsFirst.isNotEmpty()) {
         constructionSites = spawnsFirst
     }
