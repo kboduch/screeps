@@ -105,6 +105,11 @@ fun gameLoop() {
         spawnRBuilders(Game.creeps.values, mainSpawn)
     }
 
+    //todo also remove :D
+    if(mainSpawn != null && CurrentGameState.roomStates.containsKey("E42S31")) {
+        spawnScavengers(Game.creeps.values, mainSpawn)
+    }
+
     //todo write a spawning logic
     // o is extension, x is road, S is spawn
     // x o x o x
@@ -150,6 +155,13 @@ fun gameLoop() {
             Role.BUILDER -> creep.build()
             Role.UPGRADER -> creep.upgrade()
             Role.RBUILDER -> creep.build(constructionSitez.first().room ?: creep.room)
+            //todo remove
+            Role.SCAVENGER -> {
+                val gs = CurrentGameState.roomStates["E42S31"]
+                if (gs != null) {
+                    creep.scavenge("E43S31", gs.room)
+                }
+            }
             else -> creep.pause()
         }
     }
@@ -318,6 +330,40 @@ private fun spawnRBuilders(
         memory = jsObject<CreepMemory> {
             this.role = role
             this.fallbackRoom = spawn.room.name
+        }
+        energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
+    })
+
+    return when (code) {
+        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
+        else -> { console.log("unhandled error code $code"); false }
+    }
+}
+
+//todo remove
+private fun spawnScavengers(
+        creeps: Array<Creep>,
+        spawn: StructureSpawn
+): Boolean {
+    val role: Role = when {
+        creeps.count { it.memory.role == Role.SCAVENGER } < 6 -> Role.SCAVENGER
+        else -> return false
+    }
+
+    val body = arrayOf<BodyPartConstant>(
+            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY
+    )
+
+    val bodyPartsCost = body.sumBy { BODYPART_COST[it]!! }
+    if (spawn.room.energyAvailable < bodyPartsCost) {
+        return false
+    }
+
+    val newName = creepNameGenerator(role, bodyPartsCost)
+    val code = spawn.spawnCreep(body, newName, options {
+        memory = jsObject<CreepMemory> {
+            this.role = role
         }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })

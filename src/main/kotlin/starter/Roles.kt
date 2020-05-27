@@ -14,7 +14,8 @@ enum class Role {
     REPAIRER,
     TRUCKER,
     ASSAULTER,
-    RBUILDER
+    RBUILDER,
+    SCAVENGER
 }
 
 fun Creep.assault(targetRoomName: String = this.room.name) {
@@ -209,6 +210,78 @@ fun Creep.pause() {
     } else {
         memory.pause = 0
         memory.role = Role.HARVESTER
+    }
+}
+
+//todo remove this
+fun Creep.scavenge(fromRoomName: String, room: Room) {
+    if (null == store.getCapacity(RESOURCE_ENERGY)) {
+        return
+    }
+    val controller = room.controller ?: return
+
+    if (memory.building && store[RESOURCE_ENERGY] == 0) {
+        memory.building = false
+        say("🔄 harvest")
+    }
+    if (!memory.building && store[RESOURCE_ENERGY]!! == store.getCapacity(RESOURCE_ENERGY)!!) {
+        memory.building = true
+        say("🚧 upgrade")
+    }
+
+    if (memory.building) {
+        if (upgradeController(controller) == ERR_NOT_IN_RANGE) {
+            moveTo(
+                    controller.pos,
+                    options {
+                        visualizePathStyle = options {
+                            lineStyle = LINE_STYLE_DOTTED
+                        }
+                    }
+            )
+        }
+    } else {
+        if (this.pos.roomName != fromRoomName) {
+            //todo optimize
+            val route = Game.map.findRoute(this.pos.roomName, fromRoomName);
+            if(route.value != null && route.value!!.isNotEmpty()) {
+//                console.log("Harvesting from room ${route.value!![0].room}")
+                val exit = this.pos.findClosestByRange(route.value!![0].exit)
+                this.moveTo(
+                        exit!!,
+                        options {
+                            visualizePathStyle = options {
+                                lineStyle = LINE_STYLE_SOLID
+                            }
+                        }
+                )
+
+                return
+            }
+
+            console.log("No route found to $fromRoomName")
+
+            return
+        }
+
+        var activeSourcesInRange = this.pos.findInRange(FIND_SOURCES_ACTIVE, 1)
+
+        if (activeSourcesInRange.isEmpty()) {
+            activeSourcesInRange = this.room.find(FIND_SOURCES_ACTIVE, options { filter = { it.pos.getSteppableAdjacent(true).isNotEmpty() } })
+            activeSourcesInRange.sortBy { it.pos.getRangeTo(this.pos) }
+        }
+
+        if (activeSourcesInRange.isNotEmpty()) {
+            when (harvest(activeSourcesInRange[0])) {
+                ERR_NOT_IN_RANGE -> moveTo(activeSourcesInRange[0].pos, options {
+                    visualizePathStyle = options {
+                        lineStyle = LINE_STYLE_DOTTED
+                    }
+                })
+            }
+
+            return
+        }
     }
 }
 
