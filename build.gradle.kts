@@ -34,7 +34,8 @@ kotlin {
                     outputDirectory = minifiedJsDirectory
                 }
                 keep(
-                    "${project.name}.loop"
+                    "${project.name}.loop",
+                    "${project.name}.starter.setParkingCords"
                 )
             }
         }

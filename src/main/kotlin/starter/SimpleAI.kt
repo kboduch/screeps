@@ -1,15 +1,22 @@
 package starter
 
 
+import caching.GameCache
 import screeps.api.*
 import screeps.api.structures.Structure
 import screeps.api.structures.StructureSpawn
 import screeps.api.structures.StructureTower
-import screeps.utils.isEmpty
 import screeps.utils.unsafe.delete
 import screeps.utils.unsafe.jsObject
 
 fun gameLoop() {
+
+    js("global.setParkingCords = require('main').starter.setParkingCords")
+
+//    val gameCache = GameCache()
+//    gameCache.build()
+
+//    gameCache.debug()
     //gather info
     //damaged structures //walls,ramparts,other structures
     //global wall hp level
