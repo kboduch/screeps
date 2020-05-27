@@ -46,6 +46,12 @@ fun gameLoop() {
         }
 
         currentRoomState.room.visual.text(
+                "\uD83D\uDEBE",
+                currentRoomState.room.memory.parkX.toDouble(),
+                currentRoomState.room.memory.parkY.toDouble()
+        )
+
+        currentRoomState.room.visual.text(
                 "$roomName ${currentRoomState.room.energyAvailable}/${currentRoomState.room.energyCapacityAvailable} ${currentRoomState.energyContainersTotalLevel}/${currentRoomState.energyContainersTotalMaximumLevel}",
                 0.0,
                 0.0,
