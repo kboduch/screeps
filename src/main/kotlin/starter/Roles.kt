@@ -665,7 +665,7 @@ private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicks
     if (this.memory.renewing || this.ticksToLive < minimumTicksToLive) {
         this.memory.renewing = true
 
-        val spawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) }
+        val spawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) && it.unsafeCast<StructureSpawn>().spawning == null  }
         if (spawn != null) {
             when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
                 OK -> {}

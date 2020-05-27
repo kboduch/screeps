@@ -19,6 +19,9 @@ fun gameLoop() {
     //
     //store it globally for all creeps to be able to access, instead of recalculating the same thing over and over for each creep
 
+    //delete memories of creeps that have passed away
+    houseKeeping()
+
     Game.rooms.values.forEach { room: Room ->
         if (room.controller != null && room.controller!!.my) {
             CurrentGameState.roomStates[room.name] = CurrentRoomState(room) //todo change to myRoomStates
@@ -94,9 +97,6 @@ fun gameLoop() {
     if (constructionSitez.isNotEmpty() && mainSpawn != null && null == mainSpawn.spawning) {
         spawnRBuilders(Game.creeps.values, mainSpawn)
     }
-
-    //delete memories of creeps that have passed away
-    houseKeeping(Game.creeps)
 
     //todo write a spawning logic
     // o is extension, x is road, S is spawn
@@ -432,13 +432,22 @@ private fun spawnCreeps(
     }
 }
 
-private fun houseKeeping(creeps: Record<String, Creep>) {
-    if (Game.creeps.isEmpty()) return  // this is needed because Memory.creeps is undefined
+private fun houseKeeping() {
+    val flagsMemory = Memory.flags
+    if (null != flagsMemory) {
+        for ((flagName, _) in flagsMemory) {
+            if (Game.flags[flagName] == null) {
+                console.log("Deleting flag ($flagName) memory entry.")
+                delete(flagsMemory[flagName])
+            }
+        }
+    }
 
-    for ((creepName, _) in Memory.creeps) {
-        if (creeps[creepName] == null) {
-            console.log("Deleting obsolete memory entry for creep $creepName")
-            delete(Memory.creeps[creepName])
+    val creepsMemory = Memory.creeps
+    for ((creepName, _) in creepsMemory) {
+        if (Game.creeps[creepName] == null) {
+            console.log("Deleting creep ($creepName) memory entry.")
+            delete(creepsMemory[creepName])
         }
     }
 }

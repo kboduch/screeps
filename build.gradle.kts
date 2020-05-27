@@ -37,10 +37,6 @@ kotlin {
                     "${project.name}.loop"
                 )
             }
-
-            testTask {
-                useMocha()
-            }
         }
     }
 }
