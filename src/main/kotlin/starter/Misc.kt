@@ -14,10 +14,21 @@ fun <T> List<T>.filterOrReturnExistingIfEmpty(predicate: (T) -> Boolean): List<T
     return old
 }
 
+@JsName("deref")
+fun <T> deref(ref: String): T? {
+    @Suppress("UNCHECKED_CAST")
+    return (Game.getObjectById<Identifiable>(ref) ?: Game.flags[ref] ?: Game.creeps[ref] ?: Game.spawns[ref]) as T?
+}
+
 object CurrentGameState {
     val roomStates: MutableMap<String, CurrentRoomState> = mutableMapOf()
     var assaultTargetRoomName: String? = null
 }
+
+val RoomObject.ref: String
+    get() {
+        return this.unsafeCast<Identifiable>().id ?: this.unsafeCast<Creep>().name ?: ""
+    }
 
 class CurrentRoomState(val room: Room) {
 

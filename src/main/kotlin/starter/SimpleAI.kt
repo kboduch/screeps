@@ -12,6 +12,7 @@ import screeps.utils.unsafe.jsObject
 fun gameLoop() {
 
     js("global.setParkingCords = require('main').global.setParkingCords")
+    js("global.deref = require('main').starter.deref")
 
 //    val gameCache = GameCache()
 //    gameCache.build()
