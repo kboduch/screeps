@@ -11,7 +11,7 @@ import screeps.utils.unsafe.jsObject
 
 fun gameLoop() {
 
-    js("global.setParkingCords = require('main').starter.setParkingCords")
+    js("global.setParkingCords = require('main').global.setParkingCords")
 
 //    val gameCache = GameCache()
 //    gameCache.build()

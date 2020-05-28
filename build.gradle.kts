@@ -35,7 +35,7 @@ kotlin {
                 }
                 keep(
                     "${project.name}.loop",
-                    "${project.name}.starter.setParkingCords"
+                    "${project.name}.global.setParkingCords"
                 )
             }
         }

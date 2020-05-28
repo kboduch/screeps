@@ -104,13 +104,3 @@ fun creepNameGenerator(role: Role, bodyPartsCost: Int): String {
 fun isIdTargetedByCreeps(id: String): Boolean {
     return Game.creeps.values.count { it.memory.targetId == id } > 0
 }
-
-@Suppress("unused")
-@JsName("setParkingCords")
-fun setParkingCords(roomName: String, x: Int, y: Int) {
-    val room = Game.rooms[roomName]
-    if (room != null) {
-        room.memory.parkX = x
-        room.memory.parkY = y
-    }
-}
