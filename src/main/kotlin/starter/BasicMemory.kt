@@ -2,6 +2,7 @@ package starter
 
 import screeps.api.*
 import screeps.utils.memory.memory
+import tasks.ProtoTask
 
 /* Add the variables that you want to store to the persistent memory for each object type.
 * They can be accessed by using the .memory attribute of any of the instances of that class
@@ -14,6 +15,7 @@ var CreepMemory.harvestAndDeliver: Boolean by memory { true }
 var CreepMemory.pause: Int by memory { 0 }
 var CreepMemory.role by memory(Role.UNASSIGNED)
 var CreepMemory.targetId: String? by memory( )
+var CreepMemory.task: ProtoTask? by memory( )
 
 //RBUILDER
 var CreepMemory.fallbackRoom: String? by memory( )

@@ -2,12 +2,16 @@ package starter
 
 
 import caching.GameCache
+import global.ProtoPos
 import screeps.api.*
 import screeps.api.structures.Structure
 import screeps.api.structures.StructureSpawn
 import screeps.api.structures.StructureTower
 import screeps.utils.unsafe.delete
 import screeps.utils.unsafe.jsObject
+import tasks.TaskOptions
+import tasks.TaskTarget
+import tasks.Tasks
 
 fun gameLoop() {
 
@@ -139,6 +143,10 @@ fun gameLoop() {
     }
 
     for ((_, creep) in Game.creeps) {
+
+        creep.memory.task = Tasks.attack(TaskTarget(creep.ref, ProtoPos(creep))).toProtoTask()
+        console.log(creep.memory.task)
+
         if (creep.spawning) {
             continue
         }
