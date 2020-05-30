@@ -144,8 +144,8 @@ fun gameLoop() {
 
     for ((_, creep) in Game.creeps) {
 
-        creep.memory.task = Tasks.attack(TaskTarget(creep.ref, ProtoPos(creep))).toProtoTask()
-        console.log(creep.memory.task)
+//        creep.memory.task = Tasks.attack(TaskTarget(creep.ref, ProtoPos(creep))).toProtoTask()
+//        console.log(creep.memory.task)
 
         if (creep.spawning) {
             continue
@@ -177,7 +177,7 @@ fun gameLoop() {
 }
 
 private fun towerAction(tower: StructureTower) {
-    val hostileRange = 15
+    val hostileRange = 50
 
     val currentRoomState = CurrentGameState.roomStates[tower.room.name]
             ?: throw RuntimeException("Missing current room status for ${tower.room.name}")
