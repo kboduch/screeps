@@ -16,6 +16,8 @@ var CreepMemory.pause: Int by memory { 0 }
 var CreepMemory.role by memory(Role.UNASSIGNED)
 var CreepMemory.targetId: String? by memory( )
 var CreepMemory.task: ProtoTask? by memory( )
+//todo remove scavage
+var CreepMemory.scavageAndStore: Boolean by memory { false }
 
 //RBUILDER
 var CreepMemory.fallbackRoom: String? by memory( )

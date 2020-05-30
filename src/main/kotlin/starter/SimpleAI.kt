@@ -235,7 +235,7 @@ private fun spawnTrucker(
 
     return when (code) {
         OK -> {
-            console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+            console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
         }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> {
@@ -248,7 +248,7 @@ private fun spawnAssaulter(
         spawn: StructureSpawn
 ):Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.ASSAULTER } < 2 -> Role.ASSAULTER
+        creeps.count { it.memory.role == Role.ASSAULTER } < 0 -> Role.ASSAULTER
 
         else -> return false
     }
@@ -272,7 +272,7 @@ private fun spawnAssaulter(
 
     return when (code) {
         OK -> {
-            console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+            console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
         }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> {
@@ -310,7 +310,7 @@ private fun spawnBigHarvesters(
     })
 
     return when (code) {
-        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        OK -> {console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> { console.log("unhandled error code $code"); false }
     }
@@ -344,7 +344,7 @@ private fun spawnRBuilders(
     })
 
     return when (code) {
-        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        OK -> {console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> { console.log("unhandled error code $code"); false }
     }
@@ -356,7 +356,7 @@ private fun spawnScavengers(
         spawn: StructureSpawn
 ): Boolean {
     val role: Role = when {
-        creeps.count { it.memory.role == Role.SCAVENGER } < 6 -> Role.SCAVENGER
+        creeps.count { it.memory.role == Role.SCAVENGER } < 8 -> Role.SCAVENGER
         else -> return false
     }
 
@@ -373,12 +373,13 @@ private fun spawnScavengers(
     val code = spawn.spawnCreep(body, newName, options {
         memory = jsObject<CreepMemory> {
             this.role = role
+            this.scavageAndStore = creeps.count { it.memory.role == Role.SCAVENGER && it.memory.scavageAndStore } < 4
         }
         energyStructures = getSpawnEnergyStructures(spawn).unsafeCast<Array<StoreOwner>>()
     })
 
     return when (code) {
-        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        OK -> {console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> { console.log("unhandled error code $code"); false }
     }
@@ -433,7 +434,7 @@ private fun spawnEnergyVentCreeps(
 
             return when (code) {
                 OK -> {
-                    console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
+                    console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost"); true
                 }
                 ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
                 else -> {
@@ -488,7 +489,7 @@ private fun spawnCreeps(
     })
 
     return when (code) {
-        OK -> {console.log("Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
+        OK -> {console.log("[${spawn.room.name}][${spawn.name}] Spawning \"$newName\" with body \'$body\' cost: $bodyPartsCost") ; true }
         ERR_BUSY, ERR_NOT_ENOUGH_ENERGY -> false
         else -> { console.log("unhandled error code $code"); false }
     }

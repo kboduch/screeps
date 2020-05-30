@@ -230,15 +230,31 @@ fun Creep.scavenge(fromRoomName: String, room: Room) {
     }
 
     if (memory.building) {
-        if (upgradeController(controller) == ERR_NOT_IN_RANGE) {
-            moveTo(
-                    controller.pos,
-                    options {
-                        visualizePathStyle = options {
-                            lineStyle = LINE_STYLE_DOTTED
+        if (memory.scavageAndStore) {
+
+            val currentToRoomState = CurrentGameState.roomStates[room.name]
+                    ?: throw RuntimeException("Missing current room status for ${room.name}")
+            var energyContainers = currentToRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 }
+            energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
+
+            if (energyContainers.isNotEmpty()) {
+                when (transfer(energyContainers.first().unsafeCast<StoreOwner>(), RESOURCE_ENERGY)) {
+                    ERR_NOT_IN_RANGE -> moveTo(energyContainers.first().pos)
+                }
+            } else {
+                park(currentToRoomState)
+            }
+        } else {
+            if (upgradeController(controller) == ERR_NOT_IN_RANGE) {
+                moveTo(
+                        controller.pos,
+                        options {
+                            visualizePathStyle = options {
+                                lineStyle = LINE_STYLE_DOTTED
+                            }
                         }
-                    }
-            )
+                )
+            }
         }
     } else {
         if (this.pos.roomName != fromRoomName) {
@@ -331,6 +347,7 @@ fun Creep.build(assignedRoom: Room = this.room) {
     } else {
 
         val containers = currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
+                .sortedBy { it.pos.getRangeTo(this.pos) }
                 .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         if (containers.isNotEmpty()) {
@@ -645,12 +662,12 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         val towers = myStructures.filter { it.isStructureTypeOf(STRUCTURE_TOWER) && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 200  }
         val spawnsAndExtensions = myStructures.filter { it.isSpawnEnergyContainer() && it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY) > 0 && !isIdTargetedByCreeps(it.id)  }
 
-        if (spawnsAndExtensions.isNotEmpty()) {
-            energyContainers = spawnsAndExtensions
-        }
-
         if (towers.isNotEmpty()) {
             energyContainers = towers
+        }
+
+        if (spawnsAndExtensions.isNotEmpty()) {
+            energyContainers = spawnsAndExtensions
         }
 
         energyContainers = energyContainers.toMutableList().sortedBy { it.pos.getRangeTo(this.pos) }
@@ -707,11 +724,12 @@ fun Creep.truck(assignedRoom: Room = this.room) {
         // include storage when room's construction energy levels are lower then max
         val nonEmptyEnergyContainerStructures = if (currentRoomState.room.energyAvailable < currentRoomState.room.energyCapacityAvailable) {
             currentRoomState.energyContainers.filter { it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > 0 }
-                    .sortedBy { it.pos.getRangeTo(pos) }
+                    .sortedByDescending { it.pos.getRangeTo(pos) + it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY)!! }
                     .sortedWith(WeightedStructureTypeComparator(mapOf<StructureConstant, Int>(STRUCTURE_STORAGE to 0, STRUCTURE_CONTAINER to 1)))
 
         } else {
-            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > creepCargoCapacity  }.sortedBy { it.pos.getRangeTo(pos) }
+            currentRoomState.energyContainers.filter { it.isStructureTypeOf(STRUCTURE_CONTAINER) && it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY) > creepCargoCapacity  }
+                    .sortedByDescending { it.pos.getRangeTo(pos) + it.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY)!! }
         }
 
         if (nonEmptyEnergyContainerStructures.isNotEmpty()) {
@@ -738,7 +756,7 @@ private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicks
     if (this.memory.renewing || this.ticksToLive < minimumTicksToLive) {
         this.memory.renewing = true
 
-        val spawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) && it.unsafeCast<StructureSpawn>().spawning == null  }
+        val spawn = currentRoomState.myStructures.firstOrNull { it.isStructureTypeOf(STRUCTURE_SPAWN) && it.unsafeCast<StructureSpawn>().spawning == null  } as StructureSpawn?
         if (spawn != null) {
             when (val returnCode = spawn.unsafeCast<StructureSpawn>().renewCreep(this)) {
                 OK -> {}
@@ -747,7 +765,7 @@ private fun Creep.needsRenewing(currentRoomState: CurrentRoomState, minimumTicks
                 ERR_NOT_IN_RANGE -> this.moveTo(spawn)
                 ERR_FULL -> {
                     this.memory.renewing = false;
-                    console.log("Creep renewed. Resuming work.");
+                    console.log("[${spawn.room.name}][${spawn.name}] Creep renewed. Resuming work.");
                 }
                 else -> console.log("Unhandled error code $returnCode")
             }
